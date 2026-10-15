@@ -1,0 +1,1355 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Almoxarifado do Escritório</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+/* Layout: cabeçalho com resumo do estoque, abas de trabalho, uma coluna de até 1120px; a lista de compras é um bloco de post-it */
+:root {
+  --bg: #f2f4f8;
+  --surface: #ffffff;
+  --surface-2: #f6f7fb;
+  --ink: #141b33;
+  --muted: #5a6580;
+  --line: #d8dde8;
+  --accent: #2a3ed0;
+  --accent-soft: #e5e8fb;
+  --on-accent: #ffffff;
+  --warn: #8f4500;
+  --warn-bg: #fdefd9;
+  --crit: #b42318;
+  --crit-bg: #fde6e3;
+  --ok: #1c7048;
+  --ok-bg: #e0f3e8;
+  --note: #fbe37f;
+  --note-ink: #3a2f00;
+  --note-line: #e6cb5c;
+  --shadow: 0 1px 2px rgba(20, 27, 51, .06), 0 4px 16px rgba(20, 27, 51, .06);
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --r: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1321; --surface: #161d30; --surface-2: #1b2338; --ink: #e6eaf4; --muted: #9aa4bd; --line: #2a3350;
+    --accent: #8796ff; --accent-soft: #232c52; --on-accent: #0e1321;
+    --warn: #f2b35a; --warn-bg: #3a2a12; --crit: #ff8f85; --crit-bg: #3e1b1b; --ok: #72d3a2; --ok-bg: #143020;
+    --note: #4d4213; --note-ink: #fbeaa8; --note-line: #6b5c1c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1321; --surface: #161d30; --surface-2: #1b2338; --ink: #e6eaf4; --muted: #9aa4bd; --line: #2a3350;
+  --accent: #8796ff; --accent-soft: #232c52; --on-accent: #0e1321;
+  --warn: #f2b35a; --warn-bg: #3a2a12; --crit: #ff8f85; --crit-bg: #3e1b1b; --ok: #72d3a2; --ok-bg: #143020;
+  --note: #4d4213; --note-ink: #fbeaa8; --note-line: #6b5c1c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 0 48px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.papel-consulta .so-edicao, .nao-admin .so-admin { display: none !important; }
+
+/* Cabeçalho */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-block: 24px 18px; }
+.brand { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.brand .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.brand h1 { font-size: clamp(26px, 4vw, 34px); font-weight: 700; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat { display: flex; flex-direction: column; gap: 2px; padding: 8px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); min-width: 120px; text-align: left; }
+.stat b { font-family: var(--f-mono); font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+button.stat { cursor: pointer; }
+button.stat.alert { border-color: var(--warn); background: var(--warn-bg); }
+button.stat.alert b, button.stat.alert span { color: var(--warn); }
+.userbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 10px; padding-top: 14px; font-size: 13px; color: var(--muted); }
+.userbar b { color: var(--ink); font-weight: 600; }
+.linkbtn { appearance: none; border: 0; background: none; color: var(--accent); cursor: pointer; padding: 2px 4px; font-size: 13px; font-weight: 500; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Abas */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.tab { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; font-weight: 500; color: var(--muted); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.tab .count { font-family: var(--f-mono); font-size: 12px; background: var(--warn-bg); color: var(--warn); border-radius: 99px; padding: 0 7px; }
+section.panel { padding-block: 20px 0; display: flex; flex-direction: column; gap: 16px; }
+
+/* Controles */
+.btn { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 8px 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { color: var(--crit); border-color: var(--crit); background: var(--surface); }
+.btn.danger.solid { background: var(--crit); color: var(--surface); }
+.btn.small { padding: 5px 10px; font-size: 13px; }
+.btn[disabled] { opacity: .55; cursor: progress; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field input, .field select, .field textarea, .toolbar input, .toolbar select {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0;
+}
+.field small { font-size: 12px; color: var(--muted); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar .grow { flex: 1 1 220px; min-width: 0; }
+.toolbar select { width: auto; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.spacer { flex: 1 1 auto; }
+
+/* Tabelas */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+th.r, td.r { text-align: right; }
+tbody tr.clickable { cursor: pointer; }
+tbody tr.clickable:hover td { background: var(--surface-2); }
+.item-name { font-weight: 600; }
+.item-sub { font-size: 13px; color: var(--muted); }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.crit { background: var(--crit-bg); color: var(--crit); }
+.pill.in { background: var(--ok-bg); color: var(--ok); }
+.pill.out { background: var(--accent-soft); color: var(--accent); }
+.pill.adj { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.gauge { height: 4px; border-radius: 4px; background: var(--surface-2); margin-top: 6px; overflow: hidden; max-width: 120px; margin-left: auto; }
+.gauge i { display: block; height: 100%; background: var(--ok); }
+.gauge i.warn { background: var(--warn); }
+.gauge i.crit { background: var(--crit); }
+th.sel, td.sel { width: 1%; padding-right: 0; }
+td.sel { cursor: default; }
+.sel-box { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; vertical-align: middle; margin: 0; }
+.bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; background: var(--accent-soft); border-bottom: 1px solid var(--line); border-radius: var(--r) var(--r) 0 0; }
+.bulk .bulk-count { font-weight: 600; color: var(--accent); margin-right: auto; }
+.bulk.confirm-mode { background: var(--crit-bg); color: var(--crit); }
+.bulk p { margin: 0; flex: 1 1 260px; }
+
+.empty { padding: 36px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.empty h2 { font-size: 22px; }
+.empty p { max-width: 52ch; margin: 0; color: var(--muted); }
+.empty .row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.banner { padding: 12px 16px; border-radius: var(--r); background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn); margin-top: 16px; }
+.banner.info { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+
+/* Movimentar */
+.mov-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 16px; align-items: start; }
+.mov-form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; padding: 3px; background: var(--surface-2); align-self: flex-start; }
+.seg label { padding: 6px 16px; border-radius: 7px; cursor: pointer; font-weight: 600; color: var(--muted); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--accent); color: var(--on-accent); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.saldo-info { font-size: 14px; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px dashed var(--line); }
+.form-error { color: var(--crit); font-size: 14px; margin: 0; }
+.aside { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.aside h3 { font-size: 16px; }
+.mini-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.mini-list li { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.mini-list li span:first-child { min-width: 0; overflow-wrap: anywhere; }
+
+/* Histórico */
+.hist-row td { font-size: 14px; }
+.hist-detail { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.qty-in { color: var(--ok); }
+.qty-out { color: var(--accent); }
+
+/* Relatórios */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.tile { padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.tile b { font-family: var(--f-mono); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.tile span { font-size: 13px; color: var(--muted); }
+.rel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+.rel-card { padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.rel-card h3 { font-size: 17px; }
+.bars { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; font-size: 14px; }
+.bar-row .track { grid-column: 1 / -1; height: 8px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.bar-row .track i { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
+
+/* Lista de compras: post-it */
+.note { background: var(--note); color: var(--note-ink); border-radius: 4px 4px 18px 4px; padding: 22px 22px 18px; box-shadow: var(--shadow); max-width: 640px; transform: rotate(-.4deg); }
+.note h2 { font-size: 22px; margin-bottom: 4px; }
+.note .note-sub { font-size: 13px; opacity: .8; margin: 0 0 12px; }
+.note ul { list-style: none; margin: 0; padding: 0; }
+.note li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 9px 0; border-bottom: 1px solid var(--note-line); }
+.note li:last-child { border-bottom: 0; }
+.note li small { grid-column: 1 / -1; opacity: .8; }
+.note .qty { font-family: var(--f-mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.note-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+@media (prefers-reduced-motion: reduce) { .note { transform: none; } }
+
+/* Pessoas */
+.pessoas-grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.p-form { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.p-form h3, .p-lista h3 { font-size: 17px; }
+.p-lista { padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.papeis { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.papeis b { color: var(--ink); }
+.credenciais { padding: 12px; border-radius: 8px; background: var(--ok-bg); color: var(--ok); display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.credenciais pre { margin: 0; white-space: pre-wrap; font-family: var(--f-mono); font-size: 13px; color: var(--ink); background: var(--surface); padding: 10px; border-radius: 6px; overflow-wrap: anywhere; }
+.inline-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.inline-row input, .inline-row select { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 8px; min-width: 0; }
+
+/* Login */
+.login { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+.login-card { width: min(420px, 100%); padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; }
+.login-card .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.login-card h1 { font-size: 28px; }
+.login-card p { margin: 0; color: var(--muted); font-size: 14px; }
+
+/* Diálogo */
+dialog { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+dialog::backdrop { background: rgba(10, 14, 28, .45); }
+.dlg-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 18px 20px 0; }
+.dlg-head h2 { font-size: 22px; overflow-wrap: anywhere; }
+.dlg-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+.x { appearance: none; border: 0; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); padding: 4px 8px; border-radius: 6px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.fact { padding: 10px 12px; border-radius: 8px; background: var(--surface-2); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fact span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.fact b { font-weight: 500; overflow-wrap: anywhere; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.count-box { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; padding: 12px; border: 1px dashed var(--line); border-radius: 8px; }
+.count-box .field { flex: 1 1 160px; }
+.confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: var(--crit-bg); color: var(--crit); }
+.confirm p { margin: 0; flex: 1 1 200px; }
+.dlg-section-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 0; }
+
+/* Aviso flutuante */
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100vw - 32px); z-index: 10; }
+.toast.erro { background: var(--crit); color: var(--surface); }
+
+@media (max-width: 760px) {
+  .mov-grid, .pessoas-grid { grid-template-columns: minmax(0, 1fr); }
+  .hide-sm { display: none; }
+  td, th { padding: 10px; }
+  .stat { min-width: 0; flex: 1 1 30%; }
+}
+</style>
+</head>
+<body>
+
+<!-- Login / primeiro acesso -->
+<div class="login" id="tela-login" hidden>
+  <div class="card login-card">
+    <span class="eyebrow">Controle de material de escritório</span>
+    <h1>Almoxarifado do Escritório</h1>
+
+    <form id="form-login" class="dlg-body" style="padding:0" novalidate hidden>
+      <div class="field"><label for="l-email">E-mail</label><input id="l-email" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="l-senha">Senha</label><input id="l-senha" type="password" autocomplete="current-password" required></div>
+      <p class="form-error" id="l-erro" hidden></p>
+      <button class="btn primary" type="submit" id="l-entrar">Entrar</button>
+      <p>Esqueceu a senha? Peça ao administrador do almoxarifado para redefinir.</p>
+    </form>
+
+    <form id="form-setup" class="dlg-body" style="padding:0" novalidate hidden>
+      <p>Primeiro acesso: crie a conta do administrador. Depois você cadastra as outras pessoas na aba Pessoas.</p>
+      <div class="field"><label for="s-nome">Seu nome</label><input id="s-nome" autocomplete="name" required></div>
+      <div class="field"><label for="s-email">E-mail</label><input id="s-email" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="s-senha">Senha (mínimo 8 caracteres)</label><input id="s-senha" type="password" autocomplete="new-password" minlength="8" required></div>
+      <div class="field"><label for="s-senha2">Repita a senha</label><input id="s-senha2" type="password" autocomplete="new-password" required></div>
+      <p class="form-error" id="s-erro" hidden></p>
+      <button class="btn primary" type="submit" id="s-criar">Criar administrador</button>
+    </form>
+
+    <div id="sem-acesso" class="dlg-body" style="padding:0" hidden>
+      <p class="banner" style="margin:0">Seu acesso está bloqueado ou ainda não foi liberado. Fale com o administrador do almoxarifado.</p>
+      <button class="btn" type="button" id="btn-sair-bloqueado">Sair</button>
+    </div>
+
+    <p class="muted" id="login-carregando">Carregando…</p>
+  </div>
+</div>
+
+<!-- Aplicativo -->
+<div class="wrap" id="app" hidden>
+  <div class="userbar">
+    <span>Conectado como <b id="u-nome">—</b> · <span id="u-papel">—</span></span>
+    <button class="linkbtn" type="button" id="btn-minha-senha">Trocar minha senha</button>
+    <button class="linkbtn" type="button" id="btn-sair">Sair</button>
+  </div>
+  <header class="top">
+    <div class="brand">
+      <span class="eyebrow">Controle de material de escritório</span>
+      <h1>Almoxarifado do Escritório</h1>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="st-itens">–</b><span>itens cadastrados</span></div>
+      <button class="stat" id="st-alerta-btn" type="button"><b id="st-alerta">–</b><span>abaixo do mínimo</span></button>
+      <div class="stat"><b id="st-valor">–</b><span>valor em estoque</span></div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Seções">
+    <button class="tab" role="tab" id="t-estoque" data-tab="estoque" aria-selected="true">Estoque</button>
+    <button class="tab so-edicao" role="tab" id="t-movimentar" data-tab="movimentar" aria-selected="false">Entrada e saída</button>
+    <button class="tab" role="tab" id="t-historico" data-tab="historico" aria-selected="false">Histórico</button>
+    <button class="tab" role="tab" id="t-relatorios" data-tab="relatorios" aria-selected="false">Relatórios</button>
+    <button class="tab" role="tab" id="t-compras" data-tab="compras" aria-selected="false">Lista de compras <span class="count" id="tab-count" hidden></span></button>
+    <button class="tab so-admin" role="tab" id="t-pessoas" data-tab="pessoas" aria-selected="false">Pessoas</button>
+  </nav>
+
+  <div id="banner" class="banner" hidden></div>
+  <div id="consulta-banner" class="banner info" hidden>Modo consulta: você pode ver o estoque, o histórico, os relatórios e a lista de compras. Para registrar entradas e saídas, peça acesso de operador ao administrador.</div>
+
+  <!-- Estoque -->
+  <section class="panel" id="p-estoque" role="tabpanel" aria-labelledby="t-estoque">
+    <div class="toolbar">
+      <input class="grow" id="f-busca" type="search" placeholder="Buscar item, categoria ou local" aria-label="Buscar item">
+      <select id="f-cat" aria-label="Filtrar por categoria"><option value="">Todas as categorias</option></select>
+      <label class="check"><input type="checkbox" id="f-alerta"> Só abaixo do mínimo</label>
+      <span class="spacer"></span>
+      <button class="btn primary so-edicao" id="btn-novo" type="button">+ Novo item</button>
+    </div>
+    <div class="card" id="estoque-card">
+      <div class="empty"><h2>Carregando estoque…</h2></div>
+    </div>
+  </section>
+
+  <!-- Movimentar -->
+  <section class="panel" id="p-movimentar" role="tabpanel" aria-labelledby="t-movimentar" hidden>
+    <div class="mov-grid">
+      <form class="card mov-form" id="mov-form" novalidate>
+        <div class="seg" role="radiogroup" aria-label="Tipo de movimentação">
+          <label><input type="radio" name="tipo" value="entrada" id="tipo-entrada" checked><span>Entrada</span></label>
+          <label><input type="radio" name="tipo" value="saida" id="tipo-saida"><span>Saída</span></label>
+        </div>
+        <div class="fields">
+          <div class="field" style="grid-column: 1 / -1">
+            <label for="m-item">Item</label>
+            <select id="m-item" required><option value="">Escolha um item</option></select>
+          </div>
+          <div class="field">
+            <label for="m-qtd">Quantidade</label>
+            <input id="m-qtd" type="number" min="0" step="any" inputmode="decimal" required>
+          </div>
+          <div class="field">
+            <label for="m-data">Data</label>
+            <input id="m-data" type="date" required>
+          </div>
+          <div class="field only-in">
+            <label for="m-custo">Custo unitário (R$)</label>
+            <input id="m-custo" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00">
+          </div>
+          <div class="field only-in">
+            <label for="m-fornecedor">Fornecedor</label>
+            <input id="m-fornecedor" list="dl-fornecedores" autocomplete="off">
+          </div>
+          <div class="field only-in">
+            <label for="m-nf">Nº da nota fiscal</label>
+            <input id="m-nf" autocomplete="off">
+          </div>
+          <div class="field only-out" hidden>
+            <label for="m-setor">Setor</label>
+            <input id="m-setor" list="dl-setores" autocomplete="off" placeholder="Ex.: Recepção">
+          </div>
+          <div class="field only-out" hidden>
+            <label for="m-pessoa">Retirado por</label>
+            <input id="m-pessoa" list="dl-pessoas" autocomplete="off">
+          </div>
+          <div class="field" style="grid-column: 1 / -1">
+            <label for="m-obs">Observação</label>
+            <input id="m-obs" autocomplete="off">
+          </div>
+        </div>
+        <div class="saldo-info" id="m-saldo">Escolha um item para ver o saldo.</div>
+        <p class="form-error" id="m-erro" hidden></p>
+        <div class="row-actions">
+          <button class="btn primary" type="submit" id="m-enviar">Registrar entrada</button>
+        </div>
+      </form>
+      <aside class="card aside">
+        <h3>Últimos registros</h3>
+        <ul class="mini-list" id="mov-recentes"><li class="muted">Nenhum registro ainda.</li></ul>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Histórico -->
+  <section class="panel" id="p-historico" role="tabpanel" aria-labelledby="t-historico" hidden>
+    <div class="toolbar">
+      <input class="grow" id="h-busca" type="search" placeholder="Buscar item, setor, pessoa ou fornecedor" aria-label="Buscar no histórico">
+      <select id="h-tipo" aria-label="Filtrar por tipo">
+        <option value="">Todos os tipos</option>
+        <option value="entrada">Entradas</option>
+        <option value="saida">Saídas</option>
+        <option value="ajuste">Ajustes de contagem</option>
+      </select>
+    </div>
+    <div class="card table-wrap" id="hist-card"></div>
+    <p class="muted" style="margin:0;font-size:13px">Mostra os 300 registros mais recentes. Para períodos mais longos, use Relatórios.</p>
+  </section>
+
+  <!-- Relatórios -->
+  <section class="panel" id="p-relatorios" role="tabpanel" aria-labelledby="t-relatorios" hidden>
+    <div class="toolbar">
+      <label for="r-periodo" class="muted" style="font-size:14px;font-weight:600">Período</label>
+      <select id="r-periodo">
+        <option value="mes">Este mês</option>
+        <option value="mes-ant">Mês passado</option>
+        <option value="90">Últimos 90 dias</option>
+        <option value="ano">Este ano</option>
+      </select>
+    </div>
+    <div id="rel-body"></div>
+  </section>
+
+  <!-- Compras -->
+  <section class="panel" id="p-compras" role="tabpanel" aria-labelledby="t-compras" hidden>
+    <div id="compras-body"></div>
+  </section>
+
+  <!-- Pessoas (administrador) -->
+  <section class="panel so-admin" id="p-pessoas" role="tabpanel" aria-labelledby="t-pessoas" hidden>
+    <div class="pessoas-grid">
+      <form class="card p-form" id="p-form" novalidate>
+        <h3>Adicionar pessoa</h3>
+        <div class="field"><label for="p-nome">Nome</label><input id="p-nome" autocomplete="off" required></div>
+        <div class="field"><label for="p-email">E-mail</label><input id="p-email" type="email" autocomplete="off" required></div>
+        <div class="field">
+          <label for="p-senha">Senha provisória</label>
+          <div class="inline-row"><input id="p-senha" autocomplete="off" style="flex:1 1 140px" required><button class="btn small" type="button" id="p-gerar">Gerar</button></div>
+          <small>A pessoa pode trocar depois em "Trocar minha senha".</small>
+        </div>
+        <div class="field">
+          <label for="p-papel">Perfil</label>
+          <select id="p-papel">
+            <option value="operador">Operador</option>
+            <option value="consulta">Consulta</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <ul class="papeis">
+          <li><b>Operador:</b> registra entradas e saídas, cadastra e edita itens.</li>
+          <li><b>Consulta:</b> só vê estoque, histórico, relatórios e lista de compras.</li>
+          <li><b>Administrador:</b> tudo, inclusive excluir itens e gerenciar pessoas.</li>
+        </ul>
+        <p class="form-error" id="p-erro" hidden></p>
+        <button class="btn primary" type="submit" id="p-criar">Criar acesso</button>
+        <div class="credenciais" id="p-credenciais" hidden></div>
+      </form>
+      <div class="card p-lista">
+        <h3>Pessoas com acesso</h3>
+        <div class="table-wrap" id="p-tabela"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<datalist id="dl-categorias"></datalist>
+<datalist id="dl-locais"></datalist>
+<datalist id="dl-setores"></datalist>
+<datalist id="dl-pessoas"></datalist>
+<datalist id="dl-fornecedores"></datalist>
+
+<dialog id="dlg" aria-labelledby="dlg-title"></dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  "use strict";
+
+  // Endereço e chave pública do banco. A chave é pública por natureza;
+  // quem protege os dados são as regras de acesso no próprio Supabase.
+  const SUPA_URL = "https://zljrvqahsnfhcyjmcyvh.supabase.co";
+  const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsanJ2cWFoc25maGN5am1jeXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwODA3MTgsImV4cCI6MjEwNzY1NjcxOH0.ig0jWeVyYNvaNQ9HvJItkpK-A20sXvo8aZ4fcXsV76c";
+  const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+  const CATALOGO = [
+    ["Papel A4 75 g/m²", "Papelaria", "resma", 5, "Armário 1"],
+    ["Caneta esferográfica azul", "Escrita", "un", 20, "Armário 1"],
+    ["Caneta esferográfica preta", "Escrita", "un", 10, "Armário 1"],
+    ["Lápis HB", "Escrita", "un", 10, "Armário 1"],
+    ["Marca-texto amarelo", "Escrita", "un", 5, "Armário 1"],
+    ["Clipes nº 2/0", "Papelaria", "cx", 3, "Armário 1"],
+    ["Grampos 26/6", "Papelaria", "cx", 3, "Armário 1"],
+    ["Bloco adesivo 76 × 76 mm", "Papelaria", "bloco", 10, "Armário 1"],
+    ["Envelope ofício branco", "Papelaria", "pct", 2, "Armário 2"],
+    ["Pasta suspensa", "Arquivo", "un", 20, "Armário 2"],
+    ["Fita adesiva transparente 12 mm", "Papelaria", "rolo", 5, "Armário 1"],
+    ["Toner da impressora", "Impressão", "un", 1, "Armário 2"],
+    ["Pilha AA", "Diversos", "un", 8, "Armário 2"],
+    ["Copo descartável 200 ml", "Copa", "pct", 5, "Copa"],
+    ["Café 500 g", "Copa", "pct", 3, "Copa"],
+    ["Papel toalha interfolha", "Limpeza", "fardo", 2, "Depósito"],
+  ];
+  const UNIDADES = [["un", "Unidade (un)"], ["cx", "Caixa (cx)"], ["pct", "Pacote (pct)"], ["resma", "Resma (500 folhas)"], ["rolo", "Rolo"], ["bloco", "Bloco"], ["fardo", "Fardo"], ["par", "Par"], ["kg", "Quilo (kg)"], ["L", "Litro (L)"]];
+  const PAPEL = { admin: "Administrador", operador: "Operador", consulta: "Consulta" };
+
+  const state = {
+    me: null, itens: [], itensLoaded: false, movs: [], perfis: {}, tab: "estoque", relSeq: 0,
+    sel: new Set(), confirmarMassa: false, detalheId: null, atualizarDetalhe: false, timer: null,
+  };
+  const podeEditar = () => state.me && (state.me.papel === "admin" || state.me.papel === "operador");
+  const ehAdmin = () => state.me && state.me.papel === "admin";
+
+  // ---------- utilidades ----------
+  const $ = (s, el = document) => el.querySelector(s);
+  function h(tag, props, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k === "text") el.textContent = v;
+      else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of kids.flat()) {
+      if (c == null || c === false) continue;
+      el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    }
+    return el;
+  }
+  const nfQtd = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 });
+  const nfBRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const fmtQtd = (n) => nfQtd.format(Number(n) || 0);
+  const fmtBRL = (n) => nfBRL.format(Number(n) || 0);
+  const fmtData = (iso) => { const d = new Date(iso); return isNaN(d) ? "—" : d.toLocaleDateString("pt-BR"); };
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const round = (n, d = 3) => Math.round((Number(n) || 0) * 10 ** d) / 10 ** d;
+  const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  const porNome = (a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR");
+  const num = (v) => Number(v) || 0;
+
+  function situacao(it) {
+    const saldo = num(it.saldo), min = num(it.minimo);
+    if (saldo <= 0) return { cls: "crit", txt: "Sem estoque", ordem: 0 };
+    if (min > 0 && saldo < min) return { cls: "warn", txt: "Abaixo do mínimo", ordem: 1 };
+    return { cls: "ok", txt: "OK", ordem: 2 };
+  }
+  const precisaComprar = (it) => num(it.minimo) > 0 && num(it.saldo) < num(it.minimo);
+  const sugestao = (it) => Math.max(Math.ceil(num(it.minimo) * 2 - Math.max(num(it.saldo), 0)), 1);
+
+  let toastTimer;
+  function toast(msg, tipo) {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.className = "toast" + (tipo === "erro" ? " erro" : "");
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 4200);
+  }
+  function msgErro(e) {
+    const txt = String((e && (e.message || e.details)) || "");
+    if (/saldo_insuficiente/.test(txt)) return "Saldo insuficiente para essa saída.";
+    if (/saldo_negativo/.test(txt)) return "A contagem deixaria o saldo negativo.";
+    if (/quantidade_invalida/.test(txt)) return "Informe uma quantidade válida.";
+    if (/item_inexistente/.test(txt)) return "Esse item foi excluído. Atualize a página.";
+    if (/sem_permissao/.test(txt) || (e && e.code === "42501")) return "Seu perfil não tem permissão para essa ação.";
+    if (e && e.code === "23505") return "Já existe um item com esse nome.";
+    if (/JWT|session|token/i.test(txt)) return "Sua sessão expirou. Entre novamente.";
+    if (/fetch|network/i.test(txt)) return "Sem conexão com o servidor. Verifique a internet e tente de novo.";
+    return "Não foi possível concluir. Tente de novo em instantes.";
+  }
+  async function comBusy(btn, fn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    try { await fn(); } catch (e) { console.error(e); toast(msgErro(e), "erro"); } finally { btn.disabled = false; }
+  }
+  // Supabase devolve { data, error }; transforma erro em exceção
+  async function q(promessa) {
+    const { data, error } = await promessa;
+    if (error) throw error;
+    return data;
+  }
+  async function chamarFuncao(corpo) {
+    const { data, error } = await sb.functions.invoke("usuarios", { body: corpo });
+    if (error) {
+      let msg = "Não foi possível concluir. Tente de novo em instantes.";
+      try { const j = await error.context.json(); if (j && j.erro) msg = j.erro; } catch (_) { /* sem corpo */ }
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  // ---------- login ----------
+  function mostrarTela(qual) {
+    $("#tela-login").hidden = qual === "app";
+    $("#app").hidden = qual !== "app";
+  }
+  async function mostrarLogin() {
+    clearInterval(state.timer);
+    state.me = null;
+    mostrarTela("login");
+    $("#sem-acesso").hidden = true;
+    $("#form-login").hidden = true;
+    $("#form-setup").hidden = true;
+    $("#login-carregando").hidden = false;
+    let configurar = false;
+    try { configurar = await q(sb.rpc("precisa_configurar")); } catch (e) { console.error(e); }
+    $("#login-carregando").hidden = true;
+    $(configurar ? "#form-setup" : "#form-login").hidden = false;
+    setTimeout(() => $(configurar ? "#s-nome" : "#l-email").focus(), 0);
+  }
+  $("#form-login").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const erro = $("#l-erro");
+    erro.hidden = true;
+    const email = $("#l-email").value.trim(), senha = $("#l-senha").value;
+    if (!email || !senha) { erro.textContent = "Informe e-mail e senha."; erro.hidden = false; return; }
+    comBusy($("#l-entrar"), async () => {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
+      if (error) { erro.textContent = "E-mail ou senha incorretos."; erro.hidden = false; return; }
+      $("#l-senha").value = "";
+      await entrar(data.user);
+    });
+  });
+  $("#form-setup").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const erro = $("#s-erro");
+    erro.hidden = true;
+    const nome = $("#s-nome").value.trim(), email = $("#s-email").value.trim(), senha = $("#s-senha").value;
+    const falha = (m) => { erro.textContent = m; erro.hidden = false; };
+    if (!nome) return falha("Informe seu nome.");
+    if (!email) return falha("Informe o e-mail.");
+    if (senha.length < 8) return falha("A senha precisa ter pelo menos 8 caracteres.");
+    if (senha !== $("#s-senha2").value) return falha("As senhas não conferem.");
+    comBusy($("#s-criar"), async () => {
+      try { await chamarFuncao({ acao: "criar", nome, email, senha }); }
+      catch (err) { falha(err.message); return; }
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
+      if (error) { falha("Conta criada, mas não foi possível entrar. Tente pela tela de login."); mostrarLogin(); return; }
+      await entrar(data.user);
+      toast("Administrador criado. Comece cadastrando os itens.");
+    });
+  });
+  $("#btn-sair-bloqueado").addEventListener("click", sair);
+  $("#btn-sair").addEventListener("click", sair);
+  async function sair() {
+    await sb.auth.signOut();
+    mostrarLogin();
+  }
+
+  async function entrar(user) {
+    let perfil = null;
+    try { perfil = await q(sb.from("perfis").select("*").eq("user_id", user.id).maybeSingle()); } catch (e) { console.error(e); }
+    if (!perfil || !perfil.ativo) {
+      mostrarTela("login");
+      $("#form-login").hidden = true;
+      $("#form-setup").hidden = true;
+      $("#login-carregando").hidden = true;
+      $("#sem-acesso").hidden = false;
+      return;
+    }
+    state.me = perfil;
+    document.body.classList.toggle("papel-consulta", perfil.papel === "consulta");
+    document.body.classList.toggle("nao-admin", perfil.papel !== "admin");
+    $("#consulta-banner").hidden = perfil.papel !== "consulta";
+    $("#u-nome").textContent = perfil.nome || perfil.email || "você";
+    $("#u-papel").textContent = PAPEL[perfil.papel] || perfil.papel;
+    mostrarTela("app");
+    const hash = (location.hash || "").replace("#", "");
+    irPara(TABS.includes(hash) ? hash : "estoque");
+    await carregarTudo();
+    clearInterval(state.timer);
+    state.timer = setInterval(() => { if (document.visibilityState === "visible") carregarTudo(true); }, 60000);
+  }
+  window.addEventListener("focus", () => { if (state.me) carregarTudo(true); });
+
+  // ---------- dados ----------
+  async function carregarTudo(silencioso) {
+    try {
+      const [itens, movs, perfis] = await Promise.all([
+        q(sb.from("itens").select("*").order("nome")),
+        q(sb.from("movs").select("*").order("quando", { ascending: false }).limit(300)),
+        q(sb.from("perfis").select("user_id, nome, email, papel, ativo")),
+      ]);
+      state.itens = itens;
+      state.itensLoaded = true;
+      state.movs = movs;
+      state.perfis = Object.fromEntries(perfis.map((p) => [p.user_id, p]));
+      $("#banner").hidden = true;
+      renderTudo();
+    } catch (e) {
+      console.error(e);
+      if (/JWT|session|token/i.test(String(e.message))) { mostrarLogin(); return; }
+      if (!silencioso) {
+        const b = $("#banner");
+        b.textContent = "Não foi possível carregar o estoque. Verifique a internet e recarregue a página.";
+        b.hidden = false;
+      }
+    }
+  }
+
+  async function registrar(tipo, item, qtd, extra = {}, dataISO) {
+    const agora = new Date();
+    let quando = agora.toISOString();
+    if (dataISO) {
+      const d = new Date(dataISO + "T" + agora.toTimeString().slice(0, 8));
+      if (!isNaN(d)) quando = d.toISOString();
+    }
+    await q(sb.rpc("registrar_movimento", {
+      p_item: item.id, p_tipo: tipo, p_qtd: round(qtd), p_custo: extra.custoUnit || 0, p_quando: quando,
+      p_setor: extra.setor || null, p_pessoa: extra.pessoa || null, p_fornecedor: extra.fornecedor || null,
+      p_nf: extra.nf || null, p_obs: extra.obs || null,
+    }));
+  }
+
+  // ---------- abas ----------
+  const TABS = ["estoque", "movimentar", "historico", "relatorios", "compras", "pessoas"];
+  function irPara(tab) {
+    if (!TABS.includes(tab)) tab = "estoque";
+    if (tab === "movimentar" && !podeEditar()) tab = "estoque";
+    if (tab === "pessoas" && !ehAdmin()) tab = "estoque";
+    state.tab = tab;
+    for (const t of TABS) {
+      $("#p-" + t).hidden = t !== tab;
+      $("#t-" + t).setAttribute("aria-selected", String(t === tab));
+    }
+    if (tab === "relatorios") renderRelatorios();
+    if (tab === "pessoas") renderPessoas();
+  }
+  document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.tab)));
+  $("#st-alerta-btn").addEventListener("click", () => irPara("compras"));
+
+  // ---------- resumo ----------
+  function renderResumo() {
+    const ok = state.itensLoaded;
+    const alerta = state.itens.filter(precisaComprar).length;
+    const valor = state.itens.reduce((s, i) => s + Math.max(num(i.saldo), 0) * num(i.custo_medio), 0);
+    $("#st-itens").textContent = ok ? state.itens.length : "–";
+    $("#st-alerta").textContent = ok ? alerta : "–";
+    $("#st-valor").textContent = ok ? fmtBRL(valor) : "–";
+    $("#st-alerta-btn").classList.toggle("alert", ok && alerta > 0);
+    const c = $("#tab-count");
+    c.hidden = !(ok && alerta > 0);
+    c.textContent = alerta;
+  }
+
+  // ---------- estoque ----------
+  function renderEstoque() {
+    const card = $("#estoque-card");
+    card.replaceChildren();
+    if (!state.itensLoaded) {
+      card.append(h("div", { class: "empty" }, h("h2", { text: "Carregando estoque…" })));
+      return;
+    }
+    if (!state.itens.length) {
+      const btnCat = h("button", { class: "btn", type: "button" }, "Começar com catálogo básico");
+      btnCat.addEventListener("click", () => comBusy(btnCat, carregarCatalogo));
+      card.append(h("div", { class: "empty" },
+        h("h2", { text: "Nenhum item cadastrado ainda" }),
+        h("p", { text: "Cadastre o que fica no almoxarifado: papel, canetas, toner, itens de copa. Depois registre as entradas (compras) e as saídas (retiradas por setor) para o saldo se atualizar sozinho." }),
+        h("p", { class: "so-edicao", text: "O catálogo básico cria 16 itens comuns de escritório com saldo zero e estoque mínimo sugerido. Você pode editar ou excluir qualquer um depois." }),
+        h("div", { class: "row so-edicao" },
+          h("button", { class: "btn primary", type: "button", onclick: () => abrirFormItem() }, "Cadastrar primeiro item"),
+          btnCat)));
+      return;
+    }
+    const busca = norm($("#f-busca").value);
+    const cat = $("#f-cat").value;
+    const soAlerta = $("#f-alerta").checked;
+    const lista = state.itens.filter((it) => {
+      if (cat && it.categoria !== cat) return false;
+      if (soAlerta && situacao(it).ordem === 2) return false;
+      if (busca && !norm([it.nome, it.categoria, it.local].join(" ")).includes(busca)) return false;
+      return true;
+    }).sort(porNome);
+
+    // seleção para exclusão em massa (administrador)
+    for (const id of [...state.sel]) if (!state.itens.some((i) => i.id === id)) state.sel.delete(id);
+    const visiveis = lista.map((i) => i.id);
+    const chkTodos = h("input", { type: "checkbox", class: "sel-box", "aria-label": "Selecionar todos os itens visíveis" });
+    const chkLinhas = [];
+    const barra = h("div", { class: "bulk so-admin", hidden: true });
+    function atualizarMassa() {
+      const n = state.sel.size;
+      const marcadosVis = visiveis.filter((id) => state.sel.has(id)).length;
+      chkTodos.checked = visiveis.length > 0 && marcadosVis === visiveis.length;
+      chkTodos.indeterminate = marcadosVis > 0 && marcadosVis < visiveis.length;
+      chkLinhas.forEach(([id, c]) => { c.checked = state.sel.has(id); });
+      barra.hidden = n === 0;
+      barra.classList.toggle("confirm-mode", !!state.confirmarMassa);
+      if (!n) { state.confirmarMassa = false; return; }
+      const rotulo = n === 1 ? "1 item" : n + " itens";
+      if (!state.confirmarMassa) {
+        barra.replaceChildren(
+          h("span", { class: "bulk-count", text: rotulo + (n === 1 ? " selecionado" : " selecionados") }),
+          h("button", { class: "btn danger small", type: "button", onclick: () => { state.confirmarMassa = true; atualizarMassa(); } }, "Excluir selecionados"),
+          h("button", { class: "btn small", type: "button", onclick: () => { state.sel.clear(); atualizarMassa(); } }, "Limpar seleção"));
+      } else {
+        const btnSim = h("button", { class: "btn danger solid small", type: "button" }, "Excluir " + rotulo);
+        btnSim.addEventListener("click", () => comBusy(btnSim, async () => {
+          const ids = [...state.sel];
+          await q(sb.from("itens").delete().in("id", ids));
+          state.sel.clear();
+          state.confirmarMassa = false;
+          toast((ids.length === 1 ? "1 item excluído" : ids.length + " itens excluídos") + ". O histórico de movimentações foi mantido.");
+          await carregarTudo();
+        }));
+        barra.replaceChildren(
+          h("p", { text: "Excluir " + rotulo + "? Essa ação não pode ser desfeita; o histórico de movimentações continua disponível." }),
+          h("button", { class: "btn small", type: "button", onclick: () => { state.confirmarMassa = false; atualizarMassa(); } }, "Cancelar"),
+          btnSim);
+      }
+    }
+    chkTodos.addEventListener("change", () => {
+      visiveis.forEach((id) => (chkTodos.checked ? state.sel.add(id) : state.sel.delete(id)));
+      state.confirmarMassa = false;
+      atualizarMassa();
+    });
+
+    const wrap = h("div", { class: "table-wrap" });
+    const tbody = h("tbody");
+    for (const it of lista) {
+      const s = situacao(it);
+      const saldo = num(it.saldo), min = num(it.minimo);
+      const pct = min > 0 ? Math.min(100, Math.max(0, saldo / (min * 2) * 100)) : (saldo > 0 ? 100 : 0);
+      const chk = h("input", { type: "checkbox", class: "sel-box", "aria-label": "Selecionar " + it.nome });
+      chk.addEventListener("change", () => {
+        if (chk.checked) state.sel.add(it.id); else state.sel.delete(it.id);
+        state.confirmarMassa = false;
+        atualizarMassa();
+      });
+      chkLinhas.push([it.id, chk]);
+      const tdSel = h("td", { class: "sel so-admin" }, chk);
+      tdSel.addEventListener("click", (e) => { e.stopPropagation(); if (e.target === tdSel) chk.click(); });
+      const tr = h("tr", { class: "clickable", tabindex: "0" },
+        tdSel,
+        h("td", null, h("div", { class: "item-name", text: it.nome }), h("div", { class: "item-sub", text: [it.categoria, it.local].filter(Boolean).join(" · ") })),
+        h("td", { class: "hide-sm", text: it.local || "—" }),
+        h("td", { class: "r" }, h("span", { class: "num", text: fmtQtd(saldo) + " " + (it.unidade || "un") }), h("div", { class: "gauge" }, h("i", { class: s.cls === "ok" ? "" : s.cls, style: "width:" + pct + "%" }))),
+        h("td", { class: "r num hide-sm", text: min > 0 ? fmtQtd(min) : "—" }),
+        h("td", null, h("span", { class: "pill " + s.cls, text: s.txt })),
+        h("td", { class: "r num hide-sm", text: fmtBRL(Math.max(saldo, 0) * num(it.custo_medio)) }));
+      tr.addEventListener("click", () => abrirDetalhe(it.id));
+      tr.addEventListener("keydown", (e) => { if (e.target === tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); abrirDetalhe(it.id); } });
+      tbody.append(tr);
+    }
+    if (!lista.length) tbody.append(h("tr", null, h("td", { colspan: "7", class: "muted", text: "Nenhum item corresponde ao filtro." })));
+    wrap.append(h("table", null,
+      h("thead", null, h("tr", null, h("th", { class: "sel so-admin" }, chkTodos), h("th", { text: "Item" }), h("th", { class: "hide-sm", text: "Local" }), h("th", { class: "r", text: "Saldo" }), h("th", { class: "r hide-sm", text: "Mínimo" }), h("th", { text: "Situação" }), h("th", { class: "r hide-sm", text: "Valor" }))),
+      tbody));
+    card.append(barra, wrap);
+    atualizarMassa();
+  }
+  ["#f-busca", "#f-cat", "#f-alerta"].forEach((s) => $(s).addEventListener("input", renderEstoque));
+  $("#btn-novo").addEventListener("click", () => abrirFormItem());
+
+  async function carregarCatalogo() {
+    const existentes = new Set(state.itens.map((i) => norm(i.nome)));
+    const novos = CATALOGO.filter(([nome]) => !existentes.has(norm(nome)))
+      .map(([nome, categoria, unidade, minimo, local]) => ({ nome, categoria, unidade, minimo, local }));
+    if (novos.length) await q(sb.from("itens").insert(novos));
+    toast("Catálogo básico criado. Registre as entradas para lançar o saldo atual.");
+    await carregarTudo();
+  }
+
+  // ---------- listas de sugestão ----------
+  function preencherDatalist(id, valores) {
+    const dl = $(id);
+    dl.replaceChildren(...[...new Set(valores.filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR")).map((v) => h("option", { value: v })));
+  }
+  function preencherListas() {
+    preencherDatalist("#dl-categorias", state.itens.map((i) => i.categoria).concat(["Papelaria", "Escrita", "Arquivo", "Impressão", "Copa", "Limpeza", "Diversos"]));
+    preencherDatalist("#dl-locais", state.itens.map((i) => i.local));
+    preencherDatalist("#dl-setores", state.movs.map((m) => m.setor));
+    preencherDatalist("#dl-pessoas", state.movs.map((m) => m.pessoa));
+    preencherDatalist("#dl-fornecedores", state.movs.map((m) => m.fornecedor));
+    const sel = $("#f-cat"), atual = sel.value;
+    const cats = [...new Set(state.itens.map((i) => i.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    sel.replaceChildren(h("option", { value: "" }, "Todas as categorias"), ...cats.map((c) => h("option", { value: c }, c)));
+    sel.value = cats.includes(atual) ? atual : "";
+  }
+
+  // ---------- quem registrou ----------
+  function nomeDe(uid) {
+    if (!uid) return "";
+    if (state.me && uid === state.me.user_id) return "você";
+    const p = state.perfis[uid];
+    return (p && (p.nome || p.email)) || "alguém";
+  }
+  const porTxt = (m) => (m.por ? "por " + nomeDe(m.por) : "");
+
+  // ---------- movimentar ----------
+  const tipoAtual = () => ($("#tipo-saida").checked ? "saida" : "entrada");
+  const itemPorId = (id) => state.itens.find((i) => i.id === id);
+  function preencherSelectItens() {
+    const sel = $("#m-item"), atual = sel.value;
+    const itens = state.itens.slice().sort(porNome);
+    sel.replaceChildren(h("option", { value: "" }, itens.length ? "Escolha um item" : "Cadastre itens na aba Estoque"),
+      ...itens.map((i) => h("option", { value: i.id }, i.nome + " (" + (i.unidade || "un") + ")")));
+    sel.value = itens.some((i) => i.id === atual) ? atual : "";
+  }
+  function atualizarFormMov() {
+    const tipo = tipoAtual();
+    document.querySelectorAll(".only-in").forEach((el) => { el.hidden = tipo !== "entrada"; });
+    document.querySelectorAll(".only-out").forEach((el) => { el.hidden = tipo !== "saida"; });
+    $("#m-enviar").textContent = tipo === "entrada" ? "Registrar entrada" : "Registrar saída";
+    const it = itemPorId($("#m-item").value);
+    const info = $("#m-saldo");
+    if (!it) { info.textContent = "Escolha um item para ver o saldo."; return; }
+    const qv = parseFloat($("#m-qtd").value) || 0;
+    const un = it.unidade || "un";
+    const depois = tipo === "entrada" ? num(it.saldo) + qv : num(it.saldo) - qv;
+    info.replaceChildren(
+      "Saldo atual: ", h("b", { class: "num", text: fmtQtd(it.saldo) + " " + un }),
+      qv > 0 ? [" · depois deste registro: ", h("b", { class: "num", text: fmtQtd(depois) + " " + un })] : null,
+      num(it.custo_medio) > 0 ? [" · custo médio ", h("span", { class: "num", text: fmtBRL(it.custo_medio) })] : null);
+  }
+  document.querySelectorAll('input[name="tipo"]').forEach((r) => r.addEventListener("change", () => { $("#m-erro").hidden = true; atualizarFormMov(); }));
+  ["#m-item", "#m-qtd"].forEach((s) => $(s).addEventListener("input", atualizarFormMov));
+  $("#m-data").value = hojeISO();
+
+  $("#mov-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const erro = $("#m-erro");
+    erro.hidden = true;
+    const falha = (msg) => { erro.textContent = msg; erro.hidden = false; };
+    const it = itemPorId($("#m-item").value);
+    const qtd = parseFloat($("#m-qtd").value);
+    const tipo = tipoAtual();
+    if (!it) return falha("Escolha o item.");
+    if (!(qtd > 0)) return falha("Informe uma quantidade maior que zero.");
+    if (tipo === "saida" && qtd > num(it.saldo)) {
+      return falha("Saldo insuficiente: há " + fmtQtd(it.saldo) + " " + (it.unidade || "un") + ". Se o saldo estiver errado, faça uma contagem física no item.");
+    }
+    const extra = tipo === "entrada"
+      ? { custoUnit: parseFloat($("#m-custo").value) || 0, fornecedor: $("#m-fornecedor").value.trim(), nf: $("#m-nf").value.trim(), obs: $("#m-obs").value.trim() }
+      : { setor: $("#m-setor").value.trim(), pessoa: $("#m-pessoa").value.trim(), obs: $("#m-obs").value.trim() };
+    comBusy($("#m-enviar"), async () => {
+      try { await registrar(tipo, it, qtd, extra, $("#m-data").value); }
+      catch (err) { falha(msgErro(err)); return; }
+      toast((tipo === "entrada" ? "Entrada" : "Saída") + " registrada: " + fmtQtd(qtd) + " " + (it.unidade || "un") + " de " + it.nome + ".");
+      ["#m-qtd", "#m-custo", "#m-nf", "#m-obs"].forEach((s) => { $(s).value = ""; });
+      await carregarTudo();
+    });
+  });
+
+  function abrirMovimento(itemId, tipo) {
+    fecharDialogo();
+    irPara("movimentar");
+    $(tipo === "saida" ? "#tipo-saida" : "#tipo-entrada").checked = true;
+    $("#m-item").value = itemId;
+    $("#m-erro").hidden = true;
+    atualizarFormMov();
+    $("#m-qtd").focus();
+  }
+
+  function descreverMov(m) {
+    if (m.tipo === "entrada") return [m.fornecedor, m.nf ? "NF " + m.nf : "", m.obs].filter(Boolean).join(" · ");
+    if (m.tipo === "saida") return [m.setor, m.pessoa, m.obs].filter(Boolean).join(" · ");
+    return m.obs || "Ajuste por contagem física";
+  }
+  const ROTULO = { entrada: ["Entrada", "in"], saida: ["Saída", "out"], ajuste: ["Ajuste", "adj"] };
+  const sinal = (m) => (m.tipo === "saida" ? -1 : m.tipo === "ajuste" ? Math.sign(num(m.qtd)) || 1 : 1);
+  function qtdAssinada(m) {
+    const qv = m.tipo === "saida" ? -num(m.qtd) : num(m.qtd);
+    return (qv > 0 ? "+" : qv < 0 ? "−" : "") + fmtQtd(Math.abs(qv)) + " " + (m.unidade || "un");
+  }
+  const linhaDetalhe = (m) => [descreverMov(m), porTxt(m)].filter(Boolean).join(" · ");
+
+  function renderRecentes() {
+    const ul = $("#mov-recentes");
+    const ult = state.movs.slice(0, 8);
+    if (!ult.length) { ul.replaceChildren(h("li", { class: "muted" }, "Nenhum registro ainda.")); return; }
+    ul.replaceChildren(...ult.map((m) => h("li", null,
+      h("span", null, m.item_nome, h("br"), h("small", { class: "muted", text: fmtData(m.quando) + (linhaDetalhe(m) ? " · " + linhaDetalhe(m) : "") })),
+      h("span", { class: "num " + (sinal(m) > 0 ? "qty-in" : "qty-out"), text: qtdAssinada(m) }))));
+  }
+
+  // ---------- histórico ----------
+  function renderHistorico() {
+    const card = $("#hist-card");
+    const busca = norm($("#h-busca").value);
+    const tipo = $("#h-tipo").value;
+    if (!state.movs.length) {
+      card.replaceChildren(h("div", { class: "empty" }, h("h2", { text: "Sem movimentações" }), h("p", { text: "Cada entrada, saída e ajuste de contagem aparece aqui, com data, setor ou fornecedor, quem registrou e o saldo resultante." })));
+      return;
+    }
+    const lista = state.movs.filter((m) => (!tipo || m.tipo === tipo) && (!busca || norm([m.item_nome, m.setor, m.pessoa, m.fornecedor, m.nf, m.obs, nomeDe(m.por)].join(" ")).includes(busca)));
+    const tbody = h("tbody", null, lista.map((m) => {
+      const [rot, cls] = ROTULO[m.tipo] || ["—", "adj"];
+      return h("tr", { class: "hist-row" },
+        h("td", { class: "num", text: fmtData(m.quando) }),
+        h("td", null, h("span", { class: "pill " + cls, text: rot })),
+        h("td", null, h("div", { class: "item-name", text: m.item_nome }), h("div", { class: "hist-detail", text: linhaDetalhe(m) })),
+        h("td", { class: "r num " + (sinal(m) > 0 ? "qty-in" : "qty-out"), text: qtdAssinada(m) }),
+        h("td", { class: "r num hide-sm", text: num(m.valor) ? fmtBRL(m.valor) : "—" }),
+        h("td", { class: "r num hide-sm", text: fmtQtd(m.saldo_apos) }));
+    }));
+    if (!lista.length) tbody.append(h("tr", null, h("td", { colspan: "6", class: "muted", text: "Nenhum registro corresponde ao filtro." })));
+    card.replaceChildren(h("table", null,
+      h("thead", null, h("tr", null, h("th", { text: "Data" }), h("th", { text: "Tipo" }), h("th", { text: "Item" }), h("th", { class: "r", text: "Qtd." }), h("th", { class: "r hide-sm", text: "Valor" }), h("th", { class: "r hide-sm", text: "Saldo após" }))),
+      tbody));
+  }
+  ["#h-busca", "#h-tipo"].forEach((s) => $(s).addEventListener("input", renderHistorico));
+
+  // ---------- relatórios ----------
+  function intervalo(p) {
+    const d = new Date();
+    const y = d.getFullYear(), m = d.getMonth();
+    if (p === "mes-ant") return [new Date(y, m - 1, 1), new Date(y, m, 1)];
+    if (p === "90") return [new Date(d.getTime() - 90 * 864e5), null];
+    if (p === "ano") return [new Date(y, 0, 1), null];
+    return [new Date(y, m, 1), null];
+  }
+  function barras(linhas, fmt) {
+    if (!linhas.length) return h("p", { class: "muted", text: "Sem retiradas no período." });
+    const max = Math.max(...linhas.map((l) => l.v)) || 1;
+    return h("div", { class: "bars" }, linhas.map((l) => h("div", { class: "bar-row" },
+      h("span", { text: l.k }), h("span", { class: "num", text: fmt(l) }),
+      h("div", { class: "track" }, h("i", { style: "width:" + Math.max(2, l.v / max * 100) + "%" })))));
+  }
+  async function renderRelatorios() {
+    const body = $("#rel-body");
+    const seq = ++state.relSeq;
+    body.replaceChildren(h("p", { class: "muted", text: "Calculando…" }));
+    const [ini, fim] = intervalo($("#r-periodo").value);
+    let consulta = sb.from("movs").select("tipo, qtd, valor, setor, item_id, item_nome, unidade").gte("quando", ini.toISOString());
+    if (fim) consulta = consulta.lt("quando", fim.toISOString());
+    let movs;
+    try { movs = await q(consulta.order("quando", { ascending: false }).limit(1000)); }
+    catch (e) { if (seq === state.relSeq) body.replaceChildren(h("p", { class: "form-error", text: "Não foi possível carregar o relatório. Tente de novo em instantes." })); return; }
+    if (seq !== state.relSeq) return;
+    const saidas = movs.filter((m) => m.tipo === "saida");
+    const entradas = movs.filter((m) => m.tipo === "entrada");
+    const consumo = saidas.reduce((s, m) => s + num(m.valor), 0);
+    const compras = entradas.reduce((s, m) => s + num(m.valor), 0);
+    const porSetor = new Map(), porItem = new Map();
+    for (const m of saidas) {
+      const k = m.setor || "Sem setor";
+      const a = porSetor.get(k) || { k, v: 0, n: 0 };
+      a.v += num(m.valor); a.n += 1; porSetor.set(k, a);
+      const key = m.item_id || m.item_nome;
+      const b = porItem.get(key) || { k: m.item_nome, un: m.unidade || "un", q: 0, v: 0 };
+      b.q += num(m.qtd); b.v += num(m.valor); porItem.set(key, b);
+    }
+    const setores = [...porSetor.values()].sort((a, b) => b.v - a.v || b.n - a.n);
+    const usaValor = setores.some((s) => s.v > 0);
+    const setoresBar = setores.map((s) => ({ k: s.k, v: usaValor ? s.v : s.n, n: s.n, val: s.v }));
+    const itens = [...porItem.values()].sort((a, b) => b.v - a.v || b.q - a.q).slice(0, 10);
+    body.replaceChildren(
+      h("div", { class: "tiles" },
+        h("div", { class: "card tile" }, h("b", { text: fmtBRL(consumo) }), h("span", { text: "consumo (saídas a custo médio)" })),
+        h("div", { class: "card tile" }, h("b", { text: String(saidas.length) }), h("span", { text: "retiradas registradas" })),
+        h("div", { class: "card tile" }, h("b", { text: fmtBRL(compras) }), h("span", { text: "compras (entradas)" }))),
+      h("div", { class: "rel-grid", style: "margin-top:16px" },
+        h("div", { class: "card rel-card" }, h("h3", { text: "Consumo por setor" }),
+          barras(setoresBar, (l) => (usaValor ? fmtBRL(l.val) + " · " : "") + l.n + (l.n === 1 ? " retirada" : " retiradas"))),
+        h("div", { class: "card rel-card" }, h("h3", { text: "Itens mais retirados" }),
+          itens.length ? h("div", { class: "table-wrap" }, h("table", null,
+            h("thead", null, h("tr", null, h("th", { text: "Item" }), h("th", { class: "r", text: "Qtd." }), h("th", { class: "r", text: "Valor" }))),
+            h("tbody", null, itens.map((i) => h("tr", null, h("td", { text: i.k }), h("td", { class: "r num", text: fmtQtd(i.q) + " " + i.un }), h("td", { class: "r num", text: fmtBRL(i.v) }))))))
+            : h("p", { class: "muted", text: "Sem retiradas no período." }))),
+      movs.length >= 1000 ? h("p", { class: "muted", style: "font-size:13px", text: "O período tem mais de 1.000 registros; o relatório considera os 1.000 mais recentes." }) : null);
+  }
+  $("#r-periodo").addEventListener("input", renderRelatorios);
+
+  // ---------- compras ----------
+  function textoLista(lista) {
+    return "Lista de compras — " + new Date().toLocaleDateString("pt-BR") + "\n" +
+      lista.map((i) => "- " + i.nome + ": " + fmtQtd(sugestao(i)) + " " + (i.unidade || "un") + " (saldo " + fmtQtd(i.saldo) + ", mínimo " + fmtQtd(i.minimo) + ")").join("\n");
+  }
+  function copiar(texto, alvo) {
+    const fallback = () => {
+      const sel = window.getSelection(), r = document.createRange();
+      r.selectNodeContents(alvo); sel.removeAllRanges(); sel.addRange(r);
+      toast("Texto selecionado. Use Ctrl+C para copiar.");
+    };
+    try { navigator.clipboard.writeText(texto).then(() => toast("Copiado.")).catch(fallback); } catch (e) { fallback(); }
+  }
+  function renderCompras() {
+    const body = $("#compras-body");
+    if (!state.itensLoaded) { body.replaceChildren(h("p", { class: "muted", text: "Carregando…" })); return; }
+    const lista = state.itens.filter(precisaComprar).sort((a, b) => situacao(a).ordem - situacao(b).ordem || porNome(a, b));
+    if (!lista.length) {
+      body.replaceChildren(h("div", { class: "card empty" }, h("h2", { text: "Nada para comprar" }),
+        h("p", { text: state.itens.length ? "Todos os itens com estoque mínimo definido estão acima dele." : "Cadastre itens com estoque mínimo para a lista se montar sozinha." })));
+      return;
+    }
+    const ul = h("ul", null, lista.map((i) => h("li", null,
+      h("span", { text: i.nome }), h("span", { class: "qty", text: fmtQtd(sugestao(i)) + " " + (i.unidade || "un") }),
+      h("small", { text: "Saldo " + fmtQtd(i.saldo) + " · mínimo " + fmtQtd(i.minimo) + (num(i.custo_medio) > 0 ? " · estimativa " + fmtBRL(sugestao(i) * num(i.custo_medio)) : "") }))));
+    const total = lista.reduce((s, i) => s + sugestao(i) * num(i.custo_medio), 0);
+    const btn = h("button", { class: "btn", type: "button" }, "Copiar lista");
+    btn.addEventListener("click", () => copiar(textoLista(lista), ul));
+    body.replaceChildren(h("div", { class: "note" },
+      h("h2", { text: "Lista de compras" }),
+      h("p", { class: "note-sub", text: lista.length + (lista.length === 1 ? " item abaixo do mínimo" : " itens abaixo do mínimo") + ". A quantidade sugerida repõe até o dobro do mínimo." + (total > 0 ? " Estimativa pelo custo médio: " + fmtBRL(total) + "." : "") }),
+      ul,
+      h("div", { class: "note-actions" }, btn)));
+  }
+
+  // ---------- pessoas (administrador) ----------
+  function gerarSenha() {
+    const letras = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const buf = new Uint32Array(10);
+    crypto.getRandomValues(buf);
+    return Array.from(buf, (n) => letras[n % letras.length]).join("");
+  }
+  $("#p-gerar").addEventListener("click", () => { $("#p-senha").value = gerarSenha(); });
+  $("#p-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const erro = $("#p-erro");
+    erro.hidden = true;
+    const nome = $("#p-nome").value.trim(), email = $("#p-email").value.trim(), senha = $("#p-senha").value.trim(), papel = $("#p-papel").value;
+    const falha = (m) => { erro.textContent = m; erro.hidden = false; };
+    if (!nome) return falha("Informe o nome.");
+    if (!email) return falha("Informe o e-mail.");
+    if (senha.length < 8) return falha("A senha provisória precisa ter pelo menos 8 caracteres. Use o botão Gerar.");
+    comBusy($("#p-criar"), async () => {
+      try { await chamarFuncao({ acao: "criar", nome, email, senha, papel }); }
+      catch (err) { falha(err.message); return; }
+      const endereco = location.origin + location.pathname;
+      const texto = "Acesso ao Almoxarifado do Escritório\nEndereço: " + endereco + "\nE-mail: " + email + "\nSenha provisória: " + senha + "\nPerfil: " + PAPEL[papel] + "\nDepois de entrar, troque a senha em \"Trocar minha senha\".";
+      const pre = h("pre", { text: texto });
+      const box = $("#p-credenciais");
+      box.replaceChildren(h("b", { text: "Acesso criado para " + nome + ". Envie estes dados para a pessoa:" }), pre,
+        h("div", { class: "row-actions" }, h("button", { class: "btn small", type: "button", onclick: () => copiar(texto, pre) }, "Copiar dados de acesso")));
+      box.hidden = false;
+      ["#p-nome", "#p-email", "#p-senha"].forEach((s) => { $(s).value = ""; });
+      await carregarTudo();
+    });
+  });
+
+  function renderPessoas() {
+    const alvo = $("#p-tabela");
+    if (!ehAdmin()) { alvo.replaceChildren(); return; }
+    const lista = Object.values(state.perfis).sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+    if (!lista.length) { alvo.replaceChildren(h("p", { class: "muted", text: "Ninguém cadastrado ainda." })); return; }
+    const tbody = h("tbody", null, lista.map((p) => {
+      const euMesmo = p.user_id === state.me.user_id;
+      const sel = h("select", { "aria-label": "Perfil de " + (p.nome || p.email), disabled: euMesmo }, ["operador", "consulta", "admin"].map((v) => h("option", { value: v }, PAPEL[v])));
+      sel.value = p.papel;
+      sel.addEventListener("change", async () => {
+        sel.disabled = true;
+        try { await q(sb.from("perfis").update({ papel: sel.value }).eq("user_id", p.user_id)); toast("Perfil de " + (p.nome || p.email) + " alterado para " + PAPEL[sel.value] + "."); await carregarTudo(); }
+        catch (e) { toast(msgErro(e), "erro"); sel.value = p.papel; }
+        finally { sel.disabled = false; }
+      });
+      const btnAtivo = h("button", { class: "btn small" + (p.ativo ? " danger" : ""), type: "button", disabled: euMesmo }, p.ativo ? "Bloquear" : "Liberar");
+      btnAtivo.addEventListener("click", () => comBusy(btnAtivo, async () => {
+        await q(sb.from("perfis").update({ ativo: !p.ativo }).eq("user_id", p.user_id));
+        toast((p.nome || p.email) + (p.ativo ? " foi bloqueado(a)." : " foi liberado(a)."));
+        await carregarTudo();
+      }));
+      const zonaSenha = h("div", { class: "inline-row" });
+      const btnSenha = h("button", { class: "btn small", type: "button" }, "Redefinir senha");
+      btnSenha.addEventListener("click", () => {
+        const inp = h("input", { "aria-label": "Nova senha", value: gerarSenha(), style: "width:9.5em" });
+        const ok = h("button", { class: "btn small primary", type: "button" }, "Salvar");
+        ok.addEventListener("click", () => comBusy(ok, async () => {
+          const nova = inp.value.trim();
+          if (nova.length < 8) { toast("A senha precisa ter pelo menos 8 caracteres.", "erro"); return; }
+          try { await chamarFuncao({ acao: "redefinir_senha", user_id: p.user_id, senha: nova }); }
+          catch (err) { toast(err.message, "erro"); return; }
+          zonaSenha.replaceChildren(h("span", { class: "num", text: "Nova senha: " + nova }), h("button", { class: "btn small", type: "button", onclick: () => copiar(nova, zonaSenha) }, "Copiar"));
+          toast("Senha redefinida. Envie a nova senha para a pessoa.");
+        }));
+        zonaSenha.replaceChildren(inp, ok, h("button", { class: "btn small", type: "button", onclick: () => zonaSenha.replaceChildren(btnSenha) }, "Cancelar"));
+      });
+      zonaSenha.append(btnSenha);
+      return h("tr", null,
+        h("td", null, h("div", { class: "item-name", text: (p.nome || "—") + (euMesmo ? " (você)" : "") }), h("div", { class: "item-sub", text: p.email || "" })),
+        h("td", null, sel),
+        h("td", null, h("span", { class: "pill " + (p.ativo ? "ok" : "crit"), text: p.ativo ? "Ativo" : "Bloqueado" })),
+        h("td", null, h("div", { class: "inline-row" }, btnAtivo), zonaSenha));
+    }));
+    alvo.replaceChildren(h("table", null,
+      h("thead", null, h("tr", null, h("th", { text: "Pessoa" }), h("th", { text: "Perfil" }), h("th", { text: "Situação" }), h("th", { text: "Ações" }))),
+      tbody));
+  }
+
+  // ---------- diálogo ----------
+  const dlg = $("#dlg");
+  function abrirDialogo(...conteudo) {
+    dlg.replaceChildren(...conteudo);
+    if (!dlg.open) { try { dlg.showModal(); } catch (e) { dlg.setAttribute("open", ""); } }
+  }
+  function fecharDialogo() { if (dlg.open) dlg.close(); }
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) fecharDialogo(); });
+  dlg.addEventListener("close", () => { state.detalheId = null; state.atualizarDetalhe = false; });
+  const cabecalho = (titulo) => h("div", { class: "dlg-head" }, h("h2", { id: "dlg-title", text: titulo }), h("button", { class: "x", type: "button", "aria-label": "Fechar", onclick: fecharDialogo }, "×"));
+
+  $("#btn-minha-senha").addEventListener("click", () => {
+    const s1 = h("input", { id: "ms-1", type: "password", autocomplete: "new-password" });
+    const s2 = h("input", { id: "ms-2", type: "password", autocomplete: "new-password" });
+    const erro = h("p", { class: "form-error", hidden: true });
+    const salvar = h("button", { class: "btn primary", type: "submit" }, "Salvar nova senha");
+    const form = h("form", { class: "dlg-body", novalidate: true },
+      h("div", { class: "field" }, h("label", { for: "ms-1", text: "Nova senha (mínimo 8 caracteres)" }), s1),
+      h("div", { class: "field" }, h("label", { for: "ms-2", text: "Repita a nova senha" }), s2),
+      erro, h("div", { class: "row-actions" }, salvar));
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      erro.hidden = true;
+      if (s1.value.length < 8) { erro.textContent = "A senha precisa ter pelo menos 8 caracteres."; erro.hidden = false; return; }
+      if (s1.value !== s2.value) { erro.textContent = "As senhas não conferem."; erro.hidden = false; return; }
+      comBusy(salvar, async () => {
+        const { error } = await sb.auth.updateUser({ password: s1.value });
+        if (error) { erro.textContent = "Não foi possível trocar a senha. Tente uma senha diferente da atual."; erro.hidden = false; return; }
+        toast("Senha alterada.");
+        fecharDialogo();
+      });
+    });
+    abrirDialogo(cabecalho("Trocar minha senha"), form);
+    setTimeout(() => s1.focus(), 0);
+  });
+
+  function abrirFormItem(item) {
+    const novo = !item;
+    const f = (id, rot, input) => h("div", { class: "field" }, h("label", { for: id, text: rot }), input);
+    const nome = h("input", { id: "i-nome", required: true, value: item ? item.nome : "", autocomplete: "off" });
+    const cat = h("input", { id: "i-cat", list: "dl-categorias", value: item ? item.categoria || "" : "", autocomplete: "off" });
+    const unidades = UNIDADES.slice();
+    const unAtual = item ? item.unidade || "un" : "un";
+    if (!unidades.some(([v]) => v === unAtual)) unidades.push([unAtual, unAtual]);
+    const un = h("select", { id: "i-un" }, unidades.map(([v, rot]) => h("option", { value: v }, rot)));
+    un.value = unAtual;
+    const campoUn = h("div", { class: "field" },
+      h("label", { for: "i-un", text: "Unidade (como o item é contado)" }), un,
+      h("small", { text: "Ex.: caneta por unidade, clipes por caixa, papel por resma. A quantidade vai em Estoque mínimo e nas entradas." }));
+    const min = h("input", { id: "i-min", type: "number", min: "0", step: "any", value: item ? num(item.minimo) : "", inputmode: "decimal" });
+    const local = h("input", { id: "i-local", list: "dl-locais", value: item ? item.local || "" : "", autocomplete: "off", placeholder: "Ex.: Armário 1" });
+    const saldoIni = h("input", { id: "i-saldo", type: "number", min: "0", step: "any", inputmode: "decimal", placeholder: "0" });
+    const custoIni = h("input", { id: "i-custo", type: "number", min: "0", step: "0.01", inputmode: "decimal", placeholder: "0,00" });
+    const erro = h("p", { class: "form-error", hidden: true });
+    const salvar = h("button", { class: "btn primary", type: "submit" }, novo ? "Cadastrar item" : "Salvar alterações");
+    const form = h("form", { class: "dlg-body", novalidate: true },
+      h("div", { class: "fields" },
+        h("div", { class: "field", style: "grid-column: 1 / -1" }, h("label", { for: "i-nome", text: "Nome do item" }), nome),
+        f("i-cat", "Categoria", cat), campoUn, f("i-min", "Estoque mínimo (quantidade)", min), f("i-local", "Local", local),
+        novo ? f("i-saldo", "Saldo atual (opcional)", saldoIni) : null,
+        novo ? f("i-custo", "Custo unitário (R$, opcional)", custoIni) : null),
+      erro,
+      h("div", { class: "row-actions" }, salvar, h("button", { class: "btn", type: "button", onclick: () => (novo ? fecharDialogo() : abrirDetalhe(item.id)) }, "Cancelar")));
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      erro.hidden = true;
+      const dados = { nome: nome.value.trim(), categoria: cat.value.trim(), unidade: un.value || "un", minimo: round(parseFloat(min.value) || 0), local: local.value.trim() };
+      if (!dados.nome) { erro.textContent = "Informe o nome do item."; erro.hidden = false; nome.focus(); return; }
+      if (state.itens.some((i) => i.id !== (item && item.id) && norm(i.nome) === norm(dados.nome))) { erro.textContent = "Já existe um item com esse nome."; erro.hidden = false; return; }
+      comBusy(salvar, async () => {
+        if (novo) {
+          let criado;
+          try { criado = await q(sb.from("itens").insert(dados).select("*").single()); }
+          catch (err) { erro.textContent = msgErro(err); erro.hidden = false; return; }
+          const s = parseFloat(saldoIni.value) || 0;
+          if (s > 0) await registrar("entrada", criado, s, { custoUnit: parseFloat(custoIni.value) || 0, obs: "Saldo inicial" });
+          toast("Item cadastrado: " + dados.nome + ".");
+          fecharDialogo();
+          await carregarTudo();
+        } else {
+          try { await q(sb.from("itens").update(Object.assign(dados, { atualizado_em: new Date().toISOString() })).eq("id", item.id)); }
+          catch (err) { erro.textContent = msgErro(err); erro.hidden = false; return; }
+          toast("Alterações salvas.");
+          state.detalheId = item.id;
+          state.atualizarDetalhe = true;
+          await carregarTudo();
+        }
+      });
+    });
+    abrirDialogo(cabecalho(novo ? "Novo item" : "Editar item"), form);
+    setTimeout(() => nome.focus(), 0);
+  }
+
+  function abrirDetalhe(id) {
+    const it = itemPorId(id);
+    if (!it) { fecharDialogo(); return; }
+    state.detalheId = id;
+    const s = situacao(it), un = it.unidade || "un";
+    const fato = (rot, val) => h("div", { class: "fact" }, h("span", { text: rot }), h("b", { text: String(val) }));
+    const contado = h("input", { id: "c-qtd", type: "number", min: "0", step: "any", inputmode: "decimal", placeholder: fmtQtd(it.saldo) });
+    const btnAjuste = h("button", { class: "btn", type: "button" }, "Ajustar saldo");
+    btnAjuste.addEventListener("click", () => {
+      const v = parseFloat(contado.value);
+      if (!(v >= 0)) { toast("Informe a quantidade contada.", "erro"); contado.focus(); return; }
+      const delta = round(v - num(it.saldo));
+      if (delta === 0) { toast("O saldo já confere com a contagem."); return; }
+      comBusy(btnAjuste, async () => {
+        await registrar("ajuste", it, delta, { obs: "Contagem física: " + fmtQtd(v) + " " + un });
+        toast("Saldo ajustado para " + fmtQtd(v) + " " + un + ".");
+        state.atualizarDetalhe = true;
+        await carregarTudo();
+      });
+    });
+    const zonaExcluir = h("div", { class: "so-admin" });
+    const botaoExcluir = h("button", { class: "btn danger small", type: "button" }, "Excluir item");
+    botaoExcluir.addEventListener("click", () => {
+      const btnSim = h("button", { class: "btn danger solid small", type: "button" }, "Excluir");
+      btnSim.addEventListener("click", () => comBusy(btnSim, async () => {
+        await q(sb.from("itens").delete().eq("id", it.id));
+        toast("Item excluído. O histórico de movimentações foi mantido.");
+        fecharDialogo();
+        await carregarTudo();
+      }));
+      zonaExcluir.replaceChildren(h("div", { class: "confirm" },
+        h("p", { text: "Excluir “" + it.nome + "”? O histórico de movimentações continua disponível." }),
+        h("button", { class: "btn small", type: "button", onclick: () => zonaExcluir.replaceChildren(botaoExcluir) }, "Cancelar"), btnSim));
+    });
+    zonaExcluir.append(botaoExcluir);
+    const movsBox = h("ul", { class: "mini-list" }, h("li", { class: "muted" }, "Carregando movimentações…"));
+
+    abrirDialogo(cabecalho(it.nome), h("div", { class: "dlg-body" },
+      h("div", null, h("span", { class: "pill " + s.cls, text: s.txt })),
+      h("div", { class: "facts" },
+        fato("Saldo", fmtQtd(it.saldo) + " " + un), fato("Mínimo", num(it.minimo) > 0 ? fmtQtd(it.minimo) + " " + un : "Não definido"),
+        fato("Local", it.local || "—"), fato("Categoria", it.categoria || "—"),
+        fato("Custo médio", num(it.custo_medio) > 0 ? fmtBRL(it.custo_medio) : "—"), fato("Valor em estoque", fmtBRL(Math.max(num(it.saldo), 0) * num(it.custo_medio)))),
+      h("div", { class: "row-actions so-edicao" },
+        h("button", { class: "btn primary", type: "button", onclick: () => abrirMovimento(it.id, "entrada") }, "Registrar entrada"),
+        h("button", { class: "btn", type: "button", onclick: () => abrirMovimento(it.id, "saida") }, "Registrar saída"),
+        h("button", { class: "btn", type: "button", onclick: () => abrirFormItem(it) }, "Editar")),
+      h("p", { class: "dlg-section-title so-edicao", text: "Contagem física" }),
+      h("div", { class: "count-box so-edicao" }, h("div", { class: "field" }, h("label", { for: "c-qtd", text: "Quantidade contada (" + un + ")" }), contado), btnAjuste),
+      h("p", { class: "dlg-section-title", text: "Últimas movimentações" }),
+      movsBox,
+      zonaExcluir));
+
+    q(sb.from("movs").select("*").eq("item_id", it.id).order("quando", { ascending: false }).limit(15)).then((ms) => {
+      movsBox.replaceChildren(...(ms.length ? ms.map((m) => h("li", null,
+        h("span", { text: fmtData(m.quando) + " · " + (ROTULO[m.tipo] || ["—"])[0] + (linhaDetalhe(m) ? " · " + linhaDetalhe(m) : "") }),
+        h("span", { class: "num " + (sinal(m) > 0 ? "qty-in" : "qty-out"), text: qtdAssinada(m) }))) : [h("li", { class: "muted" }, "Nenhuma movimentação registrada.")]));
+    }).catch(() => movsBox.replaceChildren(h("li", { class: "muted" }, "Não foi possível carregar as movimentações.")));
+  }
+
+  // ---------- render geral ----------
+  function renderTudo() {
+    renderResumo();
+    renderEstoque();
+    preencherSelectItens();
+    preencherListas();
+    atualizarFormMov();
+    renderCompras();
+    renderHistorico();
+    renderRecentes();
+    if (state.tab === "pessoas") renderPessoas();
+    if (state.atualizarDetalhe && dlg.open && state.detalheId) {
+      state.atualizarDetalhe = false;
+      abrirDetalhe(state.detalheId);
+    }
+  }
+
+  // ---------- início ----------
+  (async () => {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session) await entrar(data.session.user);
+    else await mostrarLogin();
+    sb.auth.onAuthStateChange((evento) => { if (evento === "SIGNED_OUT") mostrarLogin(); });
+  })();
+})();
+</script>
+</body>
+</html>
