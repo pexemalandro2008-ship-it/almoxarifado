@@ -243,6 +243,41 @@ td.sel { cursor: default; }
 .note-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 @media (prefers-reduced-motion: reduce) { .note { transform: none; } }
 
+/* Pedidos */
+.papel-solicitante .so-estoque { display: none !important; }
+.pedidos-grid { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.pedidos-grid.sem-form { grid-template-columns: minmax(0, 1fr); }
+.ped-form { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.ped-form h3, .ped-lista-titulo { font-size: 17px; }
+.ped-lista-titulo { margin-right: auto; }
+.ped-form > p.muted { margin: -6px 0 0; font-size: 13px; }
+.ped-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.ped-add-item { flex: 1 1 100%; }
+.ped-add-qtd { flex: 1 1 110px; }
+.ped-linhas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ped-linhas:empty::before { content: "Nenhum item adicionado ainda."; color: var(--muted); font-size: 13px; }
+.ped-linhas li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); font-size: 14px; }
+.ped-linhas li span:first-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.ped-lista { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ped-cards { display: flex; flex-direction: column; gap: 12px; }
+.ped-card { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.ped-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ped-head b { font-family: var(--f-display); font-size: 17px; }
+.ped-meta { font-size: 13px; color: var(--muted); }
+.ped-obs { margin: 0; font-size: 14px; padding: 8px 12px; border-left: 3px solid var(--line); color: var(--muted); }
+.ped-itens td, .ped-itens th { padding: 8px 10px; font-size: 14px; }
+.ped-itens td { vertical-align: top; }
+.ped-decisao { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ped-decisao select, .ped-decisao input { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 8px; min-width: 0; font-size: 13px; }
+.ped-decisao input.q { width: 5.5em; }
+.ped-decisao input.m { flex: 1 1 140px; }
+.ped-motivo { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.ped-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.disp { font-size: 12px; font-weight: 600; }
+.disp.disponivel { color: var(--ok); }
+.disp.pouco { color: var(--warn); }
+.disp.falta { color: var(--crit); }
+
 /* Pessoas */
 .pessoas-grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .p-form { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -305,7 +340,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
 .toast.erro { background: var(--crit); color: var(--surface); }
 
 @media (max-width: 760px) {
-  .mov-grid, .pessoas-grid { grid-template-columns: minmax(0, 1fr); }
+  .mov-grid, .pessoas-grid, .pedidos-grid { grid-template-columns: minmax(0, 1fr); }
   .hide-sm { display: none; }
   td, th { padding: 10px; }
 }
@@ -401,7 +436,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     <span class="eyebrow">Controle de material de escritório</span>
     <h1 id="saudacao">Almoxarifado do Escritório</h1>
   </div>
-  <div class="stats">
+  <div class="stats so-estoque">
     <div class="stat">
       <span class="stat-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg></span>
       <span class="stat-txt"><b id="st-itens">–</b><span>itens cadastrados</span></span>
@@ -417,11 +452,12 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   </div>
 
   <nav class="tabs" role="tablist" aria-label="Seções">
-    <button class="tab" role="tab" id="t-estoque" data-tab="estoque" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>Estoque</button>
-    <button class="tab so-edicao" role="tab" id="t-movimentar" data-tab="movimentar" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20V4M3 8l4-4 4 4M17 4v16M13 16l4 4 4-4"/></svg>Entrada e saída</button>
-    <button class="tab" role="tab" id="t-historico" data-tab="historico" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Histórico</button>
-    <button class="tab" role="tab" id="t-relatorios" data-tab="relatorios" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"/></svg>Relatórios</button>
-    <button class="tab" role="tab" id="t-compras" data-tab="compras" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.4 12.2a2 2 0 0 0 2 1.6h8.8a2 2 0 0 0 2-1.6L22 7H6"/></svg>Lista de compras <span class="count" id="tab-count" hidden></span></button>
+    <button class="tab so-estoque" role="tab" id="t-estoque" data-tab="estoque" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>Estoque</button>
+    <button class="tab" role="tab" id="t-pedidos" data-tab="pedidos" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v2h6V3M9 10h6M9 14h6M9 18h3"/></svg>Pedidos <span class="count" id="ped-count" hidden></span></button>
+    <button class="tab so-edicao so-estoque" role="tab" id="t-movimentar" data-tab="movimentar" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20V4M3 8l4-4 4 4M17 4v16M13 16l4 4 4-4"/></svg>Entrada e saída</button>
+    <button class="tab so-estoque" role="tab" id="t-historico" data-tab="historico" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Histórico</button>
+    <button class="tab so-estoque" role="tab" id="t-relatorios" data-tab="relatorios" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"/></svg>Relatórios</button>
+    <button class="tab so-estoque" role="tab" id="t-compras" data-tab="compras" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.4 12.2a2 2 0 0 0 2 1.6h8.8a2 2 0 0 0 2-1.6L22 7H6"/></svg>Lista de compras <span class="count" id="tab-count" hidden></span></button>
     <button class="tab so-admin" role="tab" id="t-pessoas" data-tab="pessoas" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg>Pessoas</button>
   </nav>
 
@@ -530,8 +566,39 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     <div id="rel-body"></div>
   </section>
 
+  <!-- Pedidos dos setores -->
+  <section class="panel" id="p-pedidos" role="tabpanel" aria-labelledby="t-pedidos" hidden>
+    <div class="pedidos-grid" id="ped-grid">
+      <form class="card ped-form" id="ped-form" novalidate>
+        <h3>Novo pedido</h3>
+        <p class="muted" id="ped-setor-info">Setor: —</p>
+        <div class="ped-add">
+          <div class="field ped-add-item"><label for="ped-item">Item</label><select id="ped-item"></select></div>
+          <div class="field ped-add-qtd"><label for="ped-qtd">Quantidade</label><input id="ped-qtd" type="number" min="0" step="any" inputmode="decimal"></div>
+          <button class="btn" type="button" id="ped-add">Adicionar</button>
+        </div>
+        <ul class="ped-linhas" id="ped-linhas"></ul>
+        <div class="field"><label for="ped-obs">Observação (opcional)</label><input id="ped-obs" autocomplete="off" placeholder="Ex.: material para o novo funcionário"></div>
+        <p class="form-error" id="ped-erro" hidden></p>
+        <button class="btn primary" type="submit" id="ped-enviar">Enviar pedido</button>
+      </form>
+      <div class="ped-lista">
+        <div class="toolbar">
+          <h3 class="ped-lista-titulo" id="ped-lista-titulo">Pedidos</h3>
+          <select id="ped-filtro" aria-label="Filtrar pedidos">
+            <option value="abertos">Em aberto</option>
+            <option value="pendente">Aguardando análise</option>
+            <option value="entrega">Aguardando entrega</option>
+            <option value="todos">Todos</option>
+          </select>
+        </div>
+        <div class="ped-cards" id="ped-cards"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- Compras -->
-  <section class="panel" id="p-compras" role="tabpanel" aria-labelledby="t-compras" hidden>
+  <section class="panel so-estoque" id="p-compras" role="tabpanel" aria-labelledby="t-compras" hidden>
     <div id="compras-body"></div>
   </section>
 
@@ -550,13 +617,20 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         <div class="field">
           <label for="p-papel">Perfil</label>
           <select id="p-papel">
+            <option value="solicitante">Solicitante</option>
             <option value="operador">Operador</option>
             <option value="consulta">Consulta</option>
             <option value="admin">Administrador</option>
           </select>
         </div>
+        <div class="field">
+          <label for="p-setor">Setor</label>
+          <input id="p-setor" list="dl-setores" autocomplete="off" placeholder="Ex.: Atendimento">
+          <small>Obrigatório para Solicitante. Os pedidos da pessoa saem em nome deste setor.</small>
+        </div>
         <ul class="papeis">
-          <li><b>Operador:</b> registra entradas e saídas, cadastra e edita itens.</li>
+          <li><b>Solicitante:</b> faz pedidos de material para o setor e acompanha a aprovação. Não vê saldos nem valores.</li>
+          <li><b>Operador:</b> analisa e entrega pedidos, registra entradas e saídas, cadastra e edita itens.</li>
           <li><b>Consulta:</b> só vê estoque, histórico, relatórios e lista de compras.</li>
           <li><b>Administrador:</b> tudo, inclusive excluir itens e gerenciar pessoas.</li>
         </ul>
@@ -611,14 +685,19 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     ["Papel toalha interfolha", "Limpeza", "fardo", 2, "Depósito"],
   ];
   const UNIDADES = [["un", "Unidade (un)"], ["cx", "Caixa (cx)"], ["pct", "Pacote (pct)"], ["resma", "Resma (500 folhas)"], ["rolo", "Rolo"], ["bloco", "Bloco"], ["fardo", "Fardo"], ["par", "Par"], ["kg", "Quilo (kg)"], ["L", "Litro (L)"]];
-  const PAPEL = { admin: "Administrador", operador: "Operador", consulta: "Consulta" };
+  const PAPEL = { admin: "Administrador", operador: "Operador", consulta: "Consulta", solicitante: "Solicitante" };
+  const SETORES_PADRAO = ["Atendimento", "Compras", "Gastos", "Reposição"];
 
   const state = {
     me: null, itens: [], itensLoaded: false, movs: [], perfis: {}, tab: "estoque", relSeq: 0,
     sel: new Set(), confirmarMassa: false, detalheId: null, atualizarDetalhe: false, timer: null,
+    pedidos: [], pedidosLoaded: false, catalogo: [], pedLinhas: [], pedConfirm: {},
   };
   const podeEditar = () => state.me && (state.me.papel === "admin" || state.me.papel === "operador");
   const ehAdmin = () => state.me && state.me.papel === "admin";
+  const ehSolicitante = () => state.me && state.me.papel === "solicitante";
+  const meuSetor = () => (state.me && (state.me.setor || "").trim()) || "";
+  const podePedir = () => state.me && state.me.papel !== "consulta" && !!meuSetor();
 
   // ---------- utilidades ----------
   const $ = (s, el = document) => el.querySelector(s);
@@ -668,6 +747,15 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   }
   function msgErro(e) {
     const txt = String((e && (e.message || e.details)) || "");
+    const semSaldo = txt.match(/saldo_insuficiente: (.+)/);
+    if (semSaldo) return "Saldo insuficiente de " + semSaldo[1] + ". Registre a entrada do material antes de entregar.";
+    const excluido = txt.match(/item_excluido: (.+)/);
+    if (excluido) return "O item " + excluido[1] + " foi excluído do estoque e não pode ser entregue.";
+    if (/sem_setor/.test(txt)) return "Seu usuário não tem setor definido. Peça ao administrador para definir na aba Pessoas.";
+    if (/pedido_vazio/.test(txt)) return "Adicione pelo menos um item ao pedido.";
+    if (/pedido_nao_pendente/.test(txt)) return "Este pedido já foi analisado ou cancelado. Atualize a página.";
+    if (/pedido_nao_aprovado/.test(txt)) return "Este pedido não está aprovado para entrega. Atualize a página.";
+    if (/analise_incompleta/.test(txt)) return "Decida todos os itens do pedido antes de salvar.";
     if (/saldo_insuficiente/.test(txt)) return "Saldo insuficiente para essa saída.";
     if (/saldo_negativo/.test(txt)) return "A contagem deixaria o saldo negativo.";
     if (/quantidade_invalida/.test(txt)) return "Informe uma quantidade válida.";
@@ -771,7 +859,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       return;
     }
     state.me = perfil;
-    document.body.classList.toggle("papel-consulta", perfil.papel === "consulta");
+    document.body.classList.toggle("papel-consulta", perfil.papel === "consulta" || perfil.papel === "solicitante");
+    document.body.classList.toggle("papel-solicitante", perfil.papel === "solicitante");
     document.body.classList.toggle("nao-admin", perfil.papel !== "admin");
     $("#consulta-banner").hidden = perfil.papel !== "consulta";
     const nomeExib = perfil.nome || perfil.email || "você";
@@ -783,7 +872,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     $("#u-papel").textContent = PAPEL[perfil.papel] || perfil.papel;
     mostrarTela("app");
     const hash = (location.hash || "").replace("#", "");
-    irPara(TABS.includes(hash) ? hash : "estoque");
+    $("#ped-filtro").value = perfil.papel === "solicitante" ? "todos" : "abertos";
+    irPara(TABS.includes(hash) ? hash : (perfil.papel === "solicitante" ? "pedidos" : "estoque"));
     await carregarTudo();
     clearInterval(state.timer);
     state.timer = setInterval(() => { if (document.visibilityState === "visible") carregarTudo(true); }, 60000);
@@ -793,17 +883,29 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   // ---------- dados ----------
   async function carregarTudo(silencioso) {
     try {
-      const [itens, movs, perfis] = await Promise.all([
-        q(sb.from("itens").select("*").order("nome")),
-        q(sb.from("movs").select("*").order("quando", { ascending: false }).limit(300)),
-        q(sb.from("perfis").select("user_id, nome, email, papel, ativo")),
+      // solicitante não lê saldos nem histórico: recebe só o catálogo com a disponibilidade
+      const sol = ehSolicitante();
+      const [itens, movs, perfis, pedidos, catalogo] = await Promise.all([
+        sol ? [] : q(sb.from("itens").select("*").order("nome")),
+        sol ? [] : q(sb.from("movs").select("*").order("quando", { ascending: false }).limit(300)),
+        q(sb.from("perfis").select("user_id, nome, email, papel, ativo, setor")),
+        q(sb.from("pedidos").select("*, pedido_itens(*)").order("criado_em", { ascending: false }).limit(200)),
+        sol ? q(sb.rpc("catalogo_pedido")) : null,
       ]);
       state.itens = itens;
       state.itensLoaded = true;
       state.movs = movs;
       state.perfis = Object.fromEntries(perfis.map((p) => [p.user_id, p]));
+      const eu = state.perfis[state.me.user_id];
+      if (eu) state.me.setor = eu.setor;
+      state.pedidos = pedidos;
+      state.pedidosLoaded = true;
+      state.catalogo = catalogo || itens.map((i) => ({
+        id: i.id, nome: i.nome, categoria: i.categoria, unidade: i.unidade,
+        disponibilidade: num(i.saldo) <= 0 ? "falta" : (num(i.minimo) > 0 && num(i.saldo) < num(i.minimo) ? "pouco" : "disponivel"),
+      }));
       $("#banner").hidden = true;
-      renderTudo();
+      renderTudo(silencioso);
     } catch (e) {
       console.error(e);
       if (/JWT|session|token/i.test(String(e.message))) { mostrarLogin(); return; }
@@ -830,11 +932,12 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   }
 
   // ---------- abas ----------
-  const TABS = ["estoque", "movimentar", "historico", "relatorios", "compras", "pessoas"];
+  const TABS = ["estoque", "pedidos", "movimentar", "historico", "relatorios", "compras", "pessoas"];
   function irPara(tab) {
     if (!TABS.includes(tab)) tab = "estoque";
     if (tab === "movimentar" && !podeEditar()) tab = "estoque";
     if (tab === "pessoas" && !ehAdmin()) tab = "estoque";
+    if (ehSolicitante()) tab = "pedidos";
     state.tab = tab;
     for (const t of TABS) {
       $("#p-" + t).hidden = t !== tab;
@@ -990,7 +1093,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   function preencherListas() {
     preencherDatalist("#dl-categorias", state.itens.map((i) => i.categoria).concat(["Papelaria", "Escrita", "Arquivo", "Impressão", "Copa", "Limpeza", "Diversos"]));
     preencherDatalist("#dl-locais", state.itens.map((i) => i.local));
-    preencherDatalist("#dl-setores", state.movs.map((m) => m.setor));
+    preencherDatalist("#dl-setores", state.movs.map((m) => m.setor).concat(Object.values(state.perfis).map((p) => p.setor), SETORES_PADRAO));
     preencherDatalist("#dl-pessoas", state.movs.map((m) => m.pessoa));
     preencherDatalist("#dl-fornecedores", state.movs.map((m) => m.fornecedor));
     const sel = $("#f-cat"), atual = sel.value;
@@ -1218,6 +1321,221 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       h("div", { class: "note-actions" }, btn)));
   }
 
+  // ---------- pedidos dos setores ----------
+  const STATUS_PED = {
+    pendente: ["Aguardando análise", "warn"],
+    aprovado: ["Aprovado", "ok"],
+    parcial: ["Aprovado parcialmente", "in"],
+    reprovado: ["Reprovado", "crit"],
+    entregue: ["Entregue", "adj"],
+    cancelado: ["Cancelado", "adj"],
+  };
+  const DISP = { disponivel: "Disponível", pouco: "Pouco estoque", falta: "Em falta" };
+  const fmtDataHora = (iso) => { const d = new Date(iso); return isNaN(d) ? "—" : d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
+
+  function atualizarContadorPedidos() {
+    const c = $("#ped-count");
+    const n = podeEditar() ? state.pedidos.filter((p) => p.status === "pendente").length : 0;
+    c.hidden = !n;
+    c.textContent = n;
+  }
+
+  // formulário de novo pedido
+  function preencherSelectPedido() {
+    const sel = $("#ped-item"), atual = sel.value;
+    const itens = state.catalogo.slice().sort(porNome);
+    sel.replaceChildren(h("option", { value: "" }, itens.length ? "Escolha um item" : "Nenhum item cadastrado no almoxarifado"),
+      ...itens.map((i) => h("option", { value: i.id }, i.nome + " (" + (i.unidade || "un") + ") — " + (DISP[i.disponibilidade] || ""))));
+    sel.value = itens.some((i) => i.id === atual) ? atual : "";
+  }
+  function renderLinhasPedido() {
+    const ul = $("#ped-linhas");
+    ul.replaceChildren(...state.pedLinhas.map((l, idx) => h("li", null,
+      h("span", null, l.nome, " ", h("span", { class: "disp " + l.disponibilidade, text: "· " + (DISP[l.disponibilidade] || "") })),
+      h("span", { class: "num", text: fmtQtd(l.qtd) + " " + l.unidade }),
+      h("button", { class: "x", type: "button", "aria-label": "Remover " + l.nome, onclick: () => { state.pedLinhas.splice(idx, 1); renderLinhasPedido(); } }, "×"))));
+  }
+  $("#ped-add").addEventListener("click", () => {
+    const erro = $("#ped-erro");
+    erro.hidden = true;
+    const it = state.catalogo.find((i) => i.id === $("#ped-item").value);
+    const qtd = parseFloat($("#ped-qtd").value);
+    if (!it) { erro.textContent = "Escolha o item."; erro.hidden = false; return; }
+    if (!(qtd > 0)) { erro.textContent = "Informe a quantidade."; erro.hidden = false; $("#ped-qtd").focus(); return; }
+    const existente = state.pedLinhas.find((l) => l.item_id === it.id);
+    if (existente) existente.qtd = round(existente.qtd + qtd);
+    else state.pedLinhas.push({ item_id: it.id, nome: it.nome, unidade: it.unidade || "un", disponibilidade: it.disponibilidade, qtd: round(qtd) });
+    $("#ped-qtd").value = "";
+    $("#ped-item").value = "";
+    renderLinhasPedido();
+    $("#ped-item").focus();
+  });
+  $("#ped-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const erro = $("#ped-erro");
+    erro.hidden = true;
+    if (!state.pedLinhas.length) { erro.textContent = "Adicione pelo menos um item ao pedido."; erro.hidden = false; return; }
+    comBusy($("#ped-enviar"), async () => {
+      let criado;
+      try {
+        criado = await q(sb.rpc("criar_pedido", { p_itens: state.pedLinhas.map((l) => ({ item_id: l.item_id, qtd: l.qtd })), p_obs: $("#ped-obs").value.trim() || null }));
+      } catch (err) { erro.textContent = msgErro(err); erro.hidden = false; return; }
+      state.pedLinhas = [];
+      $("#ped-obs").value = "";
+      renderLinhasPedido();
+      toast("Pedido nº " + criado.numero + " enviado. Acompanhe a aprovação na lista ao lado.");
+      await carregarTudo();
+    });
+  });
+  $("#ped-filtro").addEventListener("input", renderPedidos);
+
+  // análise em andamento: a atualização automática não redesenha os cartões (perderia o que foi digitado)
+  $("#ped-cards").addEventListener("input", () => { state.pedSujo = true; });
+
+  function renderPedidos() {
+    state.pedSujo = false;
+    atualizarContadorPedidos();
+    const pode = podePedir();
+    $("#ped-form").hidden = !pode;
+    $("#ped-grid").classList.toggle("sem-form", !pode);
+    $("#ped-setor-info").textContent = "Setor: " + (meuSetor() || "—");
+    $("#ped-lista-titulo").textContent = ehSolicitante() ? "Pedidos do setor " + meuSetor() : "Pedidos dos setores";
+    preencherSelectPedido();
+    renderLinhasPedido();
+
+    const alvo = $("#ped-cards");
+    if (!state.pedidosLoaded) { alvo.replaceChildren(h("p", { class: "muted", text: "Carregando pedidos…" })); return; }
+    const filtro = $("#ped-filtro").value;
+    const lista = state.pedidos.filter((p) =>
+      filtro === "todos" ? true :
+      filtro === "pendente" ? p.status === "pendente" :
+      filtro === "entrega" ? (p.status === "aprovado" || p.status === "parcial") :
+      ["pendente", "aprovado", "parcial"].includes(p.status));
+    if (!lista.length) {
+      alvo.replaceChildren(h("div", { class: "card empty" },
+        h("h2", { text: state.pedidos.length ? "Nenhum pedido neste filtro" : "Nenhum pedido ainda" }),
+        h("p", { text: pode ? "Monte o pedido ao lado: escolha os itens, informe as quantidades e envie. O almoxarifado analisa e você acompanha aqui." : "Quando os setores enviarem pedidos de material, eles aparecem aqui para análise e entrega." })));
+      return;
+    }
+    alvo.replaceChildren(...lista.map(cardPedido));
+  }
+
+  function cardPedido(p) {
+    const [rot, cls] = STATUS_PED[p.status] || [p.status, "adj"];
+    const itens = (p.pedido_itens || []).slice().sort((a, b) => a.item_nome.localeCompare(b.item_nome, "pt-BR"));
+    const analisa = podeEditar() && p.status === "pendente";
+    const saldoDe = (id) => { const i = state.itens.find((x) => x.id === id); return i ? num(i.saldo) : null; };
+    const controles = new Map();
+
+    const linhas = itens.map((it) => {
+      let decisao;
+      if (analisa) {
+        const sel = h("select", { "aria-label": "Decisão para " + it.item_nome },
+          h("option", { value: "aprovar" }, "Aprovar"), h("option", { value: "reprovar" }, "Reprovar"));
+        const qtd = h("input", { class: "q", type: "number", min: "0", step: "any", inputmode: "decimal", value: num(it.qtd_pedida), "aria-label": "Quantidade aprovada de " + it.item_nome });
+        const motivo = h("input", { class: "m", placeholder: "Motivo (opcional ao aprovar)", "aria-label": "Motivo para " + it.item_nome });
+        sel.addEventListener("change", () => {
+          qtd.hidden = sel.value === "reprovar";
+          motivo.placeholder = sel.value === "reprovar" ? "Motivo da reprovação" : "Motivo (opcional ao aprovar)";
+        });
+        controles.set(it.id, { sel, qtd, motivo, it });
+        decisao = h("div", { class: "ped-decisao" }, sel, qtd, motivo);
+      } else {
+        const d = it.decisao === "aprovado"
+          ? h("span", { class: "pill ok", text: "Aprovado " + fmtQtd(it.qtd_aprovada) + " " + it.unidade })
+          : it.decisao === "reprovado" ? h("span", { class: "pill crit", text: "Reprovado" })
+          : h("span", { class: "pill warn", text: "Aguardando" });
+        decisao = h("div", null, d, it.motivo ? h("span", { class: "ped-motivo", text: it.motivo }) : null);
+      }
+      const saldo = podeEditar() || state.me.papel === "consulta" ? saldoDe(it.item_id) : null;
+      return h("tr", null,
+        h("td", null, h("div", { class: "item-name", text: it.item_nome }),
+          saldo != null ? h("div", { class: "item-sub", text: "Em estoque: " + fmtQtd(saldo) + " " + it.unidade }) : null),
+        h("td", { class: "r num", text: fmtQtd(it.qtd_pedida) + " " + it.unidade }),
+        h("td", null, decisao));
+    });
+
+    const acoes = h("div", { class: "ped-acoes" });
+    const confirmando = state.pedConfirm[p.id];
+    const voltar = () => { delete state.pedConfirm[p.id]; renderPedidos(); };
+    if (analisa) {
+      const erro = h("p", { class: "form-error", hidden: true });
+      const salvar = h("button", { class: "btn primary small", type: "button" }, "Salvar análise");
+      salvar.addEventListener("click", () => {
+        erro.hidden = true;
+        const decisoes = [];
+        for (const { sel, qtd, motivo, it } of controles.values()) {
+          const aprovar = sel.value === "aprovar";
+          const qv = parseFloat(qtd.value);
+          if (aprovar && !(qv > 0 && qv <= num(it.qtd_pedida))) { erro.textContent = "Quantidade aprovada de " + it.item_nome + " deve ser maior que zero e no máximo " + fmtQtd(it.qtd_pedida) + "."; erro.hidden = false; qtd.focus(); return; }
+          if (!aprovar && !motivo.value.trim()) { erro.textContent = "Informe o motivo da reprovação de " + it.item_nome + "."; erro.hidden = false; motivo.focus(); return; }
+          decisoes.push({ id: it.id, aprovar, qtd: aprovar ? round(qv) : 0, motivo: motivo.value.trim() });
+        }
+        comBusy(salvar, async () => {
+          const r = await q(sb.rpc("analisar_pedido", { p_pedido: p.id, p_decisoes: decisoes }));
+          toast("Pedido nº " + p.numero + ": " + (STATUS_PED[r.status] || [r.status])[0].toLowerCase() + ".");
+          await carregarTudo();
+        });
+      });
+      const tudo = h("button", { class: "btn small", type: "button" }, "Aprovar tudo como pedido");
+      tudo.addEventListener("click", () => {
+        for (const { sel, qtd, it } of controles.values()) { sel.value = "aprovar"; qtd.hidden = false; qtd.value = num(it.qtd_pedida); }
+      });
+      acoes.append(salvar, tudo, erro);
+    }
+    if (podeEditar() && (p.status === "aprovado" || p.status === "parcial")) {
+      if (confirmando === "entregar") {
+        const total = itens.filter((i) => i.decisao === "aprovado" && num(i.qtd_aprovada) > 0).length;
+        const sim = h("button", { class: "btn primary small", type: "button" }, "Confirmar entrega");
+        sim.addEventListener("click", () => comBusy(sim, async () => {
+          await q(sb.rpc("entregar_pedido", { p_pedido: p.id }));
+          delete state.pedConfirm[p.id];
+          toast("Pedido nº " + p.numero + " entregue. A baixa no estoque foi registrada para " + p.setor + ".");
+          await carregarTudo();
+        }));
+        acoes.append(h("span", { class: "ped-meta", text: "Dar baixa de " + total + (total === 1 ? " item" : " itens") + " no estoque, como saída para " + p.setor + "?" }), sim,
+          h("button", { class: "btn small", type: "button", onclick: voltar }, "Voltar"));
+      } else {
+        acoes.append(h("button", { class: "btn primary small", type: "button", onclick: () => { state.pedConfirm[p.id] = "entregar"; renderPedidos(); } }, "Registrar entrega"));
+      }
+    }
+    const podeCancelar = p.status === "pendente" && (podeEditar() || p.solicitante === state.me.user_id);
+    if (podeCancelar) {
+      if (confirmando === "cancelar") {
+        const sim = h("button", { class: "btn danger solid small", type: "button" }, "Cancelar pedido");
+        sim.addEventListener("click", () => comBusy(sim, async () => {
+          await q(sb.rpc("cancelar_pedido", { p_pedido: p.id }));
+          delete state.pedConfirm[p.id];
+          toast("Pedido nº " + p.numero + " cancelado.");
+          await carregarTudo();
+        }));
+        acoes.append(h("span", { class: "ped-meta", text: "Cancelar o pedido nº " + p.numero + "?" }), sim,
+          h("button", { class: "btn small", type: "button", onclick: voltar }, "Voltar"));
+      } else {
+        acoes.append(h("button", { class: "btn danger small", type: "button", onclick: () => { state.pedConfirm[p.id] = "cancelar"; renderPedidos(); } }, "Cancelar pedido"));
+      }
+    }
+
+    const historico = [
+      "Pedido por " + nomeDe(p.solicitante) + " em " + fmtDataHora(p.criado_em),
+      p.analisado_em ? "analisado por " + nomeDe(p.analisado_por) + " em " + fmtDataHora(p.analisado_em) : "",
+      p.entregue_em ? "entregue por " + nomeDe(p.entregue_por) + " em " + fmtDataHora(p.entregue_em) : "",
+      p.cancelado_em ? "cancelado em " + fmtDataHora(p.cancelado_em) : "",
+    ].filter(Boolean).join(" · ");
+
+    return h("article", { class: "card ped-card" },
+      h("div", { class: "ped-head" },
+        h("b", { text: "Pedido nº " + p.numero }),
+        h("span", { class: "pill " + cls, text: rot }),
+        h("span", { class: "pill adj", text: p.setor })),
+      h("div", { class: "ped-meta", text: historico }),
+      p.obs ? h("p", { class: "ped-obs", text: p.obs }) : null,
+      h("div", { class: "table-wrap" }, h("table", { class: "ped-itens" },
+        h("thead", null, h("tr", null, h("th", { text: "Item" }), h("th", { class: "r", text: "Pedido" }), h("th", { text: analisa ? "Decisão" : "Resultado" }))),
+        h("tbody", null, linhas))),
+      acoes.childNodes.length ? acoes : null);
+  }
+
   // ---------- pessoas (administrador) ----------
   function gerarSenha() {
     const letras = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -1230,22 +1548,23 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     e.preventDefault();
     const erro = $("#p-erro");
     erro.hidden = true;
-    const nome = $("#p-nome").value.trim(), email = $("#p-email").value.trim(), senha = $("#p-senha").value.trim(), papel = $("#p-papel").value;
+    const nome = $("#p-nome").value.trim(), email = $("#p-email").value.trim(), senha = $("#p-senha").value.trim(), papel = $("#p-papel").value, setor = $("#p-setor").value.trim();
     const falha = (m) => { erro.textContent = m; erro.hidden = false; };
     if (!nome) return falha("Informe o nome.");
     if (!email) return falha("Informe o e-mail.");
     if (senha.length < 8) return falha("A senha provisória precisa ter pelo menos 8 caracteres. Use o botão Gerar.");
     comBusy($("#p-criar"), async () => {
-      try { await chamarFuncao({ acao: "criar", nome, email, senha, papel }); }
+      if (papel === "solicitante" && !setor) { falha("Informe o setor da pessoa solicitante."); $("#p-setor").focus(); return; }
+      try { await chamarFuncao({ acao: "criar", nome, email, senha, papel, setor }); }
       catch (err) { falha(err.message); return; }
       const endereco = location.origin + location.pathname;
-      const texto = "Acesso ao Almoxarifado do Escritório\nEndereço: " + endereco + "\nE-mail: " + email + "\nSenha provisória: " + senha + "\nPerfil: " + PAPEL[papel] + "\nDepois de entrar, troque a senha em \"Trocar minha senha\".";
+      const texto = "Acesso ao Almoxarifado do Escritório\nEndereço: " + endereco + "\nE-mail: " + email + "\nSenha provisória: " + senha + "\nPerfil: " + PAPEL[papel] + (setor ? " (" + setor + ")" : "") + "\nDepois de entrar, troque a senha em \"Trocar minha senha\".";
       const pre = h("pre", { text: texto });
       const box = $("#p-credenciais");
       box.replaceChildren(h("b", { text: "Acesso criado para " + nome + ". Envie estes dados para a pessoa:" }), pre,
         h("div", { class: "row-actions" }, h("button", { class: "btn small", type: "button", onclick: () => copiar(texto, pre) }, "Copiar dados de acesso")));
       box.hidden = false;
-      ["#p-nome", "#p-email", "#p-senha"].forEach((s) => { $(s).value = ""; });
+      ["#p-nome", "#p-email", "#p-senha", "#p-setor"].forEach((s) => { $(s).value = ""; });
       await carregarTudo();
     });
   });
@@ -1257,7 +1576,17 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     if (!lista.length) { alvo.replaceChildren(h("p", { class: "muted", text: "Ninguém cadastrado ainda." })); return; }
     const tbody = h("tbody", null, lista.map((p) => {
       const euMesmo = p.user_id === state.me.user_id;
-      const sel = h("select", { "aria-label": "Perfil de " + (p.nome || p.email), disabled: euMesmo }, ["operador", "consulta", "admin"].map((v) => h("option", { value: v }, PAPEL[v])));
+      const sel = h("select", { "aria-label": "Perfil de " + (p.nome || p.email), disabled: euMesmo }, ["solicitante", "operador", "consulta", "admin"].map((v) => h("option", { value: v }, PAPEL[v])));
+      const setorInp = h("input", { list: "dl-setores", value: p.setor || "", placeholder: "Sem setor", "aria-label": "Setor de " + (p.nome || p.email), style: "width:9em" });
+      setorInp.addEventListener("change", async () => {
+        const novo = setorInp.value.trim();
+        if (novo === (p.setor || "")) return;
+        if (!novo && p.papel === "solicitante") { toast("Solicitante precisa ter setor.", "erro"); setorInp.value = p.setor || ""; return; }
+        setorInp.disabled = true;
+        try { await q(sb.from("perfis").update({ setor: novo || null }).eq("user_id", p.user_id)); toast("Setor de " + (p.nome || p.email) + " alterado para " + (novo || "nenhum") + "."); await carregarTudo(); }
+        catch (e) { toast(msgErro(e), "erro"); setorInp.value = p.setor || ""; }
+        finally { setorInp.disabled = false; }
+      });
       sel.value = p.papel;
       sel.addEventListener("change", async () => {
         sel.disabled = true;
@@ -1289,12 +1618,12 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       zonaSenha.append(btnSenha);
       return h("tr", null,
         h("td", null, h("div", { class: "item-name", text: (p.nome || "—") + (euMesmo ? " (você)" : "") }), h("div", { class: "item-sub", text: p.email || "" })),
-        h("td", null, sel),
+        h("td", null, h("div", { class: "inline-row" }, sel, setorInp)),
         h("td", null, h("span", { class: "pill " + (p.ativo ? "ok" : "crit"), text: p.ativo ? "Ativo" : "Bloqueado" })),
         h("td", null, h("div", { class: "inline-row" }, btnAtivo), zonaSenha));
     }));
     alvo.replaceChildren(h("table", null,
-      h("thead", null, h("tr", null, h("th", { text: "Pessoa" }), h("th", { text: "Perfil" }), h("th", { text: "Situação" }), h("th", { text: "Ações" }))),
+      h("thead", null, h("tr", null, h("th", { text: "Pessoa" }), h("th", { text: "Perfil e setor" }), h("th", { text: "Situação" }), h("th", { text: "Ações" }))),
       tbody));
   }
 
@@ -1452,7 +1781,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   }
 
   // ---------- render geral ----------
-  function renderTudo() {
+  function renderTudo(silencioso) {
+    if (silencioso && state.pedSujo) atualizarContadorPedidos(); else renderPedidos();
     renderResumo();
     renderEstoque();
     preencherSelectItens();
