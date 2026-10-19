@@ -259,23 +259,26 @@ td.sel { cursor: default; }
 .login { min-height: 100vh; display: grid; place-items: center; padding: 72px 16px 24px; position: relative; }
 .login-theme { position: absolute; top: 16px; right: 16px; }
 .login-shell { width: min(900px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-lg); overflow: hidden; }
-.login-side { background: var(--accent); color: var(--on-accent); padding: 40px 36px; display: flex; flex-direction: column; gap: 18px; position: relative; overflow: hidden; }
-.login-side::after { content: ""; position: absolute; right: -70px; bottom: -70px; width: 240px; height: 240px; border-radius: 50%; border: 40px solid color-mix(in srgb, var(--on-accent) 12%, transparent); pointer-events: none; }
-.brand-card { align-self: flex-start; background: var(--paper); border-radius: 14px; padding: 12px 16px; box-shadow: 0 8px 24px rgba(10, 20, 60, .18); position: relative; z-index: 1; }
-.brand-card img { display: block; width: 210px; max-width: 100%; height: auto; }
-.login-side .eyebrow { color: inherit; opacity: .75; }
-.login-side h1 { font-size: clamp(26px, 3.4vw, 32px); }
-.login-side p { margin: 0; opacity: .85; font-size: 15px; max-width: 36ch; }
-.login-side ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px; position: relative; z-index: 1; }
-.login-side li { display: flex; gap: 10px; align-items: flex-start; }
-.login-side li svg { width: 18px; height: 18px; flex: none; margin-top: 2px; }
+/* painel da marca: imagem da Cortical Medical ocupando todo o lado esquerdo (a mesma nos dois temas) */
+.login-side {
+  min-height: 520px; display: flex; flex-direction: column; justify-content: flex-end; padding: 32px 36px;
+  background: linear-gradient(to top, rgba(0, 34, 110, .55), rgba(0, 34, 110, 0) 45%), url("login-cortical.webp") center / cover no-repeat, #0a74ec;
+  color: #ffffff;
+}
+.login-msg { display: flex; flex-direction: column; gap: 14px; text-shadow: 0 1px 2px rgba(0, 20, 70, .35); }
+.login-msg p { margin: 0; font-size: 15px; font-weight: 500; max-width: 36ch; }
+.login-msg ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.login-msg li { display: flex; gap: 10px; align-items: flex-start; }
+.login-msg li svg { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .login-card { padding: 40px 36px; display: flex; flex-direction: column; gap: 14px; justify-content: center; min-width: 0; }
+.login-card .eyebrow { margin-bottom: -8px; }
 .login-card h2 { font-size: 24px; }
 .login-card p { margin: 0; color: var(--muted); font-size: 14px; }
 @media (max-width: 720px) {
   .login-shell { grid-template-columns: minmax(0, 1fr); }
-  .login-side { padding: 28px 24px; }
-  .login-side ul { display: none; }
+  .login-side { min-height: 0; aspect-ratio: 16 / 10; padding: 0; }
+  .login-msg { display: none; }
   .login-card { padding: 28px 24px; }
 }
 
@@ -324,17 +327,18 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   </button>
   <div class="login-shell">
   <div class="login-side">
-    <div class="brand-card"><img src="logo-cortical.png" alt="Cortical Medical — transformando vidas" width="600" height="162"></div>
-    <span class="eyebrow">Controle de material de escritório</span>
-    <h1>Almoxarifado do Escritório</h1>
-    <p>Saiba o que tem no armário, quem retirou e o que precisa comprar.</p>
-    <ul>
-      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Saldo atualizado a cada entrada e retirada</li>
-      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Consumo por setor e por período</li>
-      <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Lista de compras gerada sozinha</li>
-    </ul>
+    <span class="sr-only">Cortical Medical — transformando vidas</span>
+    <div class="login-msg">
+      <p>Saiba o que tem no armário, quem retirou e o que precisa comprar.</p>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Saldo atualizado a cada entrada e retirada</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Consumo por setor e por período</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Lista de compras gerada sozinha</li>
+      </ul>
+    </div>
   </div>
   <div class="login-card">
+    <span class="eyebrow">Almoxarifado do Escritório</span>
     <h2 id="login-titulo">Entrar</h2>
 
     <form id="form-login" class="dlg-body" style="padding:0" novalidate hidden>
