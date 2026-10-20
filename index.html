@@ -1365,7 +1365,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
             h("thead", null, h("tr", null, h("th", { text: "Item" }), h("th", { class: "r", text: "Qtd." }), h("th", { class: "r", text: "Valor" }))),
             h("tbody", null, itens.map((i) => h("tr", null, h("td", { text: i.k }), h("td", { class: "r num", text: fmtQtd(i.q) + " " + i.un }), h("td", { class: "r num", text: fmtBRL(i.v) }))))))
             : h("p", { class: "muted", text: "Sem retiradas no período." }))),
-      movs.length >= 1000 ? h("p", { class: "muted", style: "font-size:13px", text: "O período tem mais de 1.000 registros; o relatório considera os 1.000 mais recentes." }) : null);
+      // replaceChildren escreveria "null" na tela: só inclui o aviso quando existe
+      ...(movs.length >= 1000 ? [h("p", { class: "muted", style: "font-size:13px", text: "O período tem mais de 1.000 registros; o relatório considera os 1.000 mais recentes." })] : []));
   }
   $("#r-periodo").addEventListener("input", renderRelatorios);
 
