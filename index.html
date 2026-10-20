@@ -40,6 +40,8 @@
   --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
   --r: 14px;
   --paper: #ffffff; /* fundo do logo: fica branco nos dois temas */
+  --aurora-op: .32;
+  --dot: #3346a8;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -47,7 +49,7 @@
     --bg: #0b1020; --surface: #121a2b; --surface-2: #182136; --ink: #e8ecf6; --muted: #98a3bd; --line: #24304a;
     --accent: #8796ff; --accent-soft: #232c52; --on-accent: #0e1321;
     --warn: #f2b35a; --warn-bg: #3a2a12; --crit: #ff8f85; --crit-bg: #3e1b1b; --ok: #72d3a2; --ok-bg: #143020;
-    --note: #4d4213; --note-ink: #fbeaa8; --note-line: #6b5c1c;
+    --note: #4d4213; --note-ink: #fbeaa8; --note-line: #6b5c1c; --aurora-op: .45; --dot: #8fa2e6;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25); --shadow-lg: 0 24px 60px rgba(0, 0, 0, .5);
     color-scheme: dark;
   }
@@ -56,7 +58,7 @@
   --bg: #0b1020; --surface: #121a2b; --surface-2: #182136; --ink: #e8ecf6; --muted: #98a3bd; --line: #24304a;
   --accent: #8796ff; --accent-soft: #232c52; --on-accent: #0e1321;
   --warn: #f2b35a; --warn-bg: #3a2a12; --crit: #ff8f85; --crit-bg: #3e1b1b; --ok: #72d3a2; --ok-bg: #143020;
-  --note: #4d4213; --note-ink: #fbeaa8; --note-line: #6b5c1c;
+  --note: #4d4213; --note-ink: #fbeaa8; --note-line: #6b5c1c; --aurora-op: .45; --dot: #8fa2e6;
   --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25); --shadow-lg: 0 24px 60px rgba(0, 0, 0, .5);
   color-scheme: dark;
 }
@@ -72,6 +74,15 @@ h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .papel-consulta .so-edicao, .nao-admin .so-admin { display: none !important; }
+
+/* Fundo de pontos (Dot Field): atrás de todo o site, mais apagado no centro, onde fica o conteúdo */
+#dot-field {
+  position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;
+  color: var(--dot); opacity: 0; transition: opacity .5s ease-out;
+  -webkit-mask-image: radial-gradient(ellipse 85% 80% at 50% 50%, #000 45%, transparent 100%);
+  mask-image: radial-gradient(ellipse 85% 80% at 50% 50%, #000 45%, transparent 100%);
+}
+@media (prefers-reduced-motion: reduce) { #dot-field { transition: none; } }
 
 /* Barra superior fixa */
 .appbar { position: sticky; top: 0; z-index: 5; background: var(--bg); background: color-mix(in srgb, var(--bg) 85%, transparent); -webkit-backdrop-filter: saturate(1.4) blur(10px); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
@@ -304,7 +315,17 @@ td.sel { cursor: default; }
 .email-grupo > span { white-space: nowrap; padding: 0 10px; align-self: stretch; display: flex; align-items: center; border: 1px solid var(--line); border-left: 0; border-radius: 0 10px 10px 0; background: var(--surface-2); font-size: 13px; }
 
 /* Login */
-.login { min-height: 100vh; display: grid; place-items: center; padding: 72px 16px 24px; position: relative; }
+.login { min-height: 100vh; display: grid; place-items: center; padding: 72px 16px 24px; position: relative; overflow: hidden; isolation: isolate; }
+/* fundo animado: manchas de luz desfocadas nas cores da marca, movendo devagar */
+.login-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.login-bg span { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; filter: blur(90px); opacity: var(--aurora-op); will-change: transform; }
+.login-bg span:nth-child(1) { background: #0a74ec; top: -25vmax; left: -15vmax; animation: aurora-a 24s ease-in-out infinite alternate; }
+.login-bg span:nth-child(2) { background: #6fc3f2; bottom: -30vmax; right: -20vmax; animation: aurora-b 28s ease-in-out infinite alternate; }
+.login-bg span:nth-child(3) { background: var(--accent); top: 30%; left: 35%; width: 40vmax; height: 40vmax; animation: aurora-c 20s ease-in-out infinite alternate; }
+@keyframes aurora-a { from { transform: translate(0, 0) scale(1); } to { transform: translate(18vmax, 12vmax) scale(1.15); } }
+@keyframes aurora-b { from { transform: translate(0, 0) scale(1.1); } to { transform: translate(-16vmax, -14vmax) scale(.95); } }
+@keyframes aurora-c { from { transform: translate(-10vmax, 6vmax) scale(.9); } to { transform: translate(12vmax, -8vmax) scale(1.2); } }
+@media (prefers-reduced-motion: reduce) { .login-bg span { animation: none; } }
 .login-theme { position: absolute; top: 16px; right: 16px; }
 .login-shell { width: min(900px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow-lg); overflow: hidden; }
 /* painel da marca: imagem da Cortical Medical ocupando todo o lado esquerdo (a mesma nos dois temas) */
@@ -366,9 +387,11 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
 </style>
 </head>
 <body>
+<canvas id="dot-field" aria-hidden="true"></canvas>
 
 <!-- Login / primeiro acesso -->
 <div class="login" id="tela-login" hidden>
+  <div class="login-bg" aria-hidden="true"><span></span><span></span><span></span></div>
   <button class="icon-btn theme-btn login-theme" type="button" aria-label="Alternar tema claro ou escuro">
     <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
     <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -1928,6 +1951,375 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     else await mostrarLogin();
     sb.auth.onAuthStateChange((evento) => { if (evento === "SIGNED_OUT") mostrarLogin(); });
   })();
+})();
+</script>
+<script>
+/*
+ * Fundo de pontos (Dot Field) — portado para JavaScript puro a partir do
+ * componente React "kokonut-dot-field" (kokonutUI, @dorianbaffier).
+ * Alterações: sem React/Tailwind; o campo cobre a janela inteira como fundo
+ * do site e escuta o ponteiro na janela.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2025 kokonutUI
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+(() => {
+  "use strict";
+  const canvas = document.getElementById("dot-field");
+  const ctx = canvas && canvas.getContext("2d");
+  if (!ctx) return;
+
+  const NOISE_SCALE = 240, NOISE_SPEED = 0.07, TONE_STEP = 3, IDLE_FRAME_MS = 33;
+  const ANCHOR = 26, COUPLING = 340, DAMPING = 2.4, STEP = 1 / 120;
+  const POINTER_RADIUS = 72, POINTER_GAIN = 14, POINTER_MAX_SPEED = 2600, POINTER_PART = 0.45;
+  const SHOCK_SPEED = 620, SHOCK_WIDTH = 34, SHOCK_FORCE = 5200, SHOCK_LIFE = 1.3;
+  const COMPRESSION_GAIN = 3, BUCKETS = 10, REST_SPEED = 2, REST_OFFSET = 0.15;
+
+  // Ruído de gradiente 3D com semente (Perlin), aproximadamente -1 a 1.
+  function createNoise(seed) {
+    const p = Array.from({ length: 256 }, (_, i) => i);
+    let state = seed >>> 0 || 1;
+    const random = () => { state = (state * 1664525 + 1013904223) >>> 0; return state / 4294967296; };
+    for (let i = 255; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; }
+    const perm = new Uint8Array(512);
+    for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+    const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const grad = (hash, x, y, z) => {
+      const h = hash & 15;
+      const u = h < 8 ? x : y;
+      let v = z;
+      if (h < 4) v = y; else if (h === 12 || h === 14) v = x;
+      return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+    };
+    return (x, y, z) => {
+      const X = Math.floor(x) & 255, Y = Math.floor(y) & 255, Z = Math.floor(z) & 255;
+      const fx = x - Math.floor(x), fy = y - Math.floor(y), fz = z - Math.floor(z);
+      const u = fade(fx), v = fade(fy), w = fade(fz);
+      const A = perm[X] + Y, AA = perm[A] + Z, AB = perm[A + 1] + Z;
+      const B = perm[X + 1] + Y, BA = perm[B] + Z, BB = perm[B + 1] + Z;
+      return lerp(
+        lerp(lerp(grad(perm[AA], fx, fy, fz), grad(perm[BA], fx - 1, fy, fz), u),
+             lerp(grad(perm[AB], fx, fy - 1, fz), grad(perm[BB], fx - 1, fy - 1, fz), u), v),
+        lerp(lerp(grad(perm[AA + 1], fx, fy, fz - 1), grad(perm[BA + 1], fx - 1, fy, fz - 1), u),
+             lerp(grad(perm[AB + 1], fx, fy - 1, fz - 1), grad(perm[BB + 1], fx - 1, fy - 1, fz - 1), u), v),
+        w);
+    };
+  }
+
+  function createField(width, height, spacing) {
+    const cols = Math.ceil(width / spacing) + 3;
+    const rows = Math.ceil(height / spacing) + 3;
+    const size = cols * rows;
+    return {
+      cols, rows, spacing,
+      originX: (width - (cols - 1) * spacing) / 2,
+      originY: (height - (rows - 1) * spacing) / 2,
+      tone: new Float32Array(size),
+      coarse: new Float32Array((Math.ceil((cols - 1) / TONE_STEP) + 1) * (Math.ceil((rows - 1) / TONE_STEP) + 1)),
+      ox: new Float32Array(size), oy: new Float32Array(size),
+      vx: new Float32Array(size), vy: new Float32Array(size),
+      ax: new Float32Array(size), ay: new Float32Array(size),
+    };
+  }
+
+  // Meio-tom em repouso: o ruído é amostrado a cada TONE_STEP pontos e interpolado.
+  function sampleTone(field, noise, time) {
+    const { cols, rows, spacing, originX, originY, tone, coarse } = field;
+    const z = time * NOISE_SPEED;
+    const step = spacing * TONE_STEP;
+    const coarseCols = Math.ceil((cols - 1) / TONE_STEP) + 1;
+    const coarseRows = Math.ceil((rows - 1) / TONE_STEP) + 1;
+    for (let j = 0; j < coarseRows; j++) {
+      const ny = (originY + j * step) / NOISE_SCALE;
+      for (let i = 0; i < coarseCols; i++) {
+        const nx = (originX + i * step) / NOISE_SCALE;
+        const n = noise(nx, ny, z) * 0.75 + noise(nx * 2.1 + 9.3, ny * 2.1 + 3.7, z * 1.3) * 0.25;
+        coarse[j * coarseCols + i] = Math.min(1, Math.max(0, 0.5 + n * 1.1));
+      }
+    }
+    for (let j = 0; j < rows; j++) {
+      const cj = Math.min(Math.floor(j / TONE_STEP), coarseRows - 2);
+      const fy = j / TONE_STEP - cj;
+      for (let i = 0; i < cols; i++) {
+        const ci = Math.min(Math.floor(i / TONE_STEP), coarseCols - 2);
+        const fx = i / TONE_STEP - ci;
+        const a = cj * coarseCols + ci;
+        const top = coarse[a] + (coarse[a + 1] - coarse[a]) * fx;
+        const bottom = coarse[a + coarseCols] + (coarse[a + coarseCols + 1] - coarse[a + coarseCols]) * fx;
+        tone[j * cols + i] = top + (bottom - top) * fy;
+      }
+    }
+  }
+
+  function neighbours(values, field, i, j) {
+    const { cols, rows } = field;
+    const k = j * cols + i;
+    let sum = 0;
+    if (i > 0) sum += values[k - 1];
+    if (i < cols - 1) sum += values[k + 1];
+    if (j > 0) sum += values[k - cols];
+    if (j < rows - 1) sum += values[k + cols];
+    return sum;
+  }
+
+  function accelerate(field) {
+    const { cols, rows, ox, oy, vx, vy, ax, ay } = field;
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const k = j * cols + i;
+        const sx = neighbours(ox, field, i, j);
+        const sy = neighbours(oy, field, i, j);
+        ax[k] += -ANCHOR * ox[k] + COUPLING * (sx - 4 * ox[k]) - DAMPING * vx[k];
+        ay[k] += -ANCHOR * oy[k] + COUPLING * (sy - 4 * oy[k]) - DAMPING * vy[k];
+      }
+    }
+  }
+
+  function applyShocks(field, shocks) {
+    const { cols, rows, spacing, originX, originY, ax, ay } = field;
+    for (const shock of shocks) {
+      const reach = shock.age * SHOCK_SPEED;
+      const fade = 1 - shock.age / SHOCK_LIFE;
+      const force = SHOCK_FORCE * fade * fade;
+      const outer = reach + SHOCK_WIDTH;
+      const inner = Math.max(0, reach - SHOCK_WIDTH);
+      const i0 = Math.max(0, Math.floor((shock.x - outer - originX) / spacing));
+      const i1 = Math.min(cols - 1, Math.ceil((shock.x + outer - originX) / spacing));
+      const j0 = Math.max(0, Math.floor((shock.y - outer - originY) / spacing));
+      const j1 = Math.min(rows - 1, Math.ceil((shock.y + outer - originY) / spacing));
+      for (let j = j0; j <= j1; j++) {
+        const dy = originY + j * spacing - shock.y;
+        for (let i = i0; i <= i1; i++) {
+          const dx = originX + i * spacing - shock.x;
+          const dist = Math.hypot(dx, dy);
+          if (dist < inner || dist > outer || dist === 0) continue;
+          const band = 1 - Math.abs(dist - reach) / SHOCK_WIDTH;
+          const k = j * cols + i;
+          ax[k] += (dx / dist) * force * band;
+          ay[k] += (dy / dist) * force * band;
+        }
+      }
+    }
+  }
+
+  function applyPointer(field, pointer, dt) {
+    const segX = pointer.x - pointer.lastX;
+    const segY = pointer.y - pointer.lastY;
+    pointer.lastX = pointer.x;
+    pointer.lastY = pointer.y;
+    const length = Math.hypot(segX, segY);
+    if (!pointer.inside || length < 0.5 || dt <= 0) return false;
+    const speed = Math.min(length / dt, POINTER_MAX_SPEED);
+    const pvx = (segX / length) * speed;
+    const pvy = (segY / length) * speed;
+    const { cols, rows, spacing, originX, originY, vx, vy } = field;
+    const startX = pointer.x - segX, startY = pointer.y - segY;
+    const minX = Math.min(startX, pointer.x) - POINTER_RADIUS, maxX = Math.max(startX, pointer.x) + POINTER_RADIUS;
+    const minY = Math.min(startY, pointer.y) - POINTER_RADIUS, maxY = Math.max(startY, pointer.y) + POINTER_RADIUS;
+    const i0 = Math.max(0, Math.floor((minX - originX) / spacing));
+    const i1 = Math.min(cols - 1, Math.ceil((maxX - originX) / spacing));
+    const j0 = Math.max(0, Math.floor((minY - originY) / spacing));
+    const j1 = Math.min(rows - 1, Math.ceil((maxY - originY) / spacing));
+    const lengthSq = length * length;
+    const gain = Math.min(1, POINTER_GAIN * dt);
+    for (let j = j0; j <= j1; j++) {
+      const py = originY + j * spacing;
+      for (let i = i0; i <= i1; i++) {
+        const px = originX + i * spacing;
+        const t = Math.min(1, Math.max(0, ((px - startX) * segX + (py - startY) * segY) / lengthSq));
+        const awayX = px - startX - segX * t;
+        const awayY = py - startY - segY * t;
+        const dist = Math.hypot(awayX, awayY);
+        if (dist >= POINTER_RADIUS) continue;
+        const falloff = 1 - dist / POINTER_RADIUS;
+        const k = j * cols + i;
+        const amount = gain * falloff * falloff;
+        const side = dist > 0 ? (speed * POINTER_PART) / dist : 0;
+        vx[k] += (pvx + awayX * side - vx[k]) * amount;
+        vy[k] += (pvy + awayY * side - vy[k]) * amount;
+      }
+    }
+    return true;
+  }
+
+  function integrate(field, shocks, h) {
+    const { ox, oy, vx, vy, ax, ay } = field;
+    ax.fill(0);
+    ay.fill(0);
+    applyShocks(field, shocks);
+    accelerate(field);
+    let moving = false;
+    for (let k = 0; k < ox.length; k++) {
+      vx[k] += ax[k] * h;
+      vy[k] += ay[k] * h;
+      ox[k] += vx[k] * h;
+      oy[k] += vy[k] * h;
+      if (!moving && (Math.abs(vx[k]) > REST_SPEED || Math.abs(vy[k]) > REST_SPEED ||
+          Math.abs(ox[k]) > REST_OFFSET || Math.abs(oy[k]) > REST_OFFSET)) moving = true;
+    }
+    return moving;
+  }
+
+  function compression(field, i, j) {
+    const { cols, rows, spacing, ox, oy } = field;
+    const k = j * cols + i;
+    const left = i > 0 ? ox[k - 1] : 0;
+    const right = i < cols - 1 ? ox[k + 1] : 0;
+    const up = j > 0 ? oy[k - cols] : 0;
+    const down = j < rows - 1 ? oy[k + cols] : 0;
+    return -(right - left + down - up) / (2 * spacing);
+  }
+
+  function draw(field, size, moving) {
+    const { cols, rows, spacing, originX, originY, tone, ox, oy } = field;
+    const maxRadius = spacing * 0.42;
+    const paths = Array.from({ length: BUCKETS }, () => new Path2D());
+    const filled = new Uint8Array(BUCKETS);
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const k = j * cols + i;
+        let amount = 0.12 + 0.6 * tone[k];
+        if (moving) amount *= 1 + COMPRESSION_GAIN * compression(field, i, j);
+        const bucket = Math.round(Math.min(1, Math.max(0, amount)) * (BUCKETS - 1));
+        if (bucket === 0) continue;
+        const radius = (maxRadius * bucket) / (BUCKETS - 1);
+        const x = originX + i * spacing + ox[k];
+        const y = originY + j * spacing + oy[k];
+        paths[bucket].moveTo(x + radius, y);
+        paths[bucket].arc(x, y, radius, 0, Math.PI * 2);
+        filled[bucket] = 1;
+      }
+    }
+    ctx.clearRect(0, 0, size.width, size.height);
+    ctx.fillStyle = size.color;
+    for (let b = 1; b < BUCKETS; b++) {
+      if (filled[b]) { ctx.globalAlpha = 0.2 + (0.32 * b) / (BUCKETS - 1); ctx.fill(paths[b]); }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const noise = createNoise(7);
+  const gap = 16;
+  const size = { width: 0, height: 0, color: "" };
+  let field = createField(0, 0, gap);
+  const pointer = { x: 0, y: 0, lastX: 0, lastY: 0, inside: false };
+  const shocks = [];
+  let time = 0, last = 0, lastTone = 0, carry = 0;
+  let stirring = false, awake = false, raf = 0, visible = document.visibilityState === "visible";
+
+  const resize = () => {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    size.width = rect.width;
+    size.height = rect.height;
+    canvas.width = Math.round(size.width * dpr);
+    canvas.height = Math.round(size.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    size.color = getComputedStyle(canvas).color;
+    field = createField(size.width, size.height, gap);
+    sampleTone(field, noise, time);
+    awake = false;
+  };
+
+  const physics = (dt) => {
+    const pushed = applyPointer(field, pointer, dt);
+    carry = Math.min(carry + dt, STEP * 6);
+    while (carry >= STEP) {
+      carry -= STEP;
+      for (const shock of shocks) shock.age += STEP;
+      while (shocks.length > 0 && shocks[0].age > SHOCK_LIFE) shocks.shift();
+      stirring = integrate(field, shocks, STEP);
+    }
+    if (!(pushed || stirring || shocks.length > 0)) {
+      field.ox.fill(0); field.oy.fill(0); field.vx.fill(0); field.vy.fill(0);
+      awake = false;
+    }
+  };
+
+  const frame = (now) => {
+    raf = 0;
+    if (!visible) return;
+    const dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
+    last = now;
+    time += dt;
+    const wasAwake = awake;
+    if (awake) physics(dt);
+    const toneDue = now - lastTone >= IDLE_FRAME_MS;
+    if (toneDue) { sampleTone(field, noise, time); lastTone = now; }
+    if (wasAwake || toneDue) draw(field, size, wasAwake);
+    raf = requestAnimationFrame(frame);
+  };
+
+  const start = () => {
+    if (!raf && visible && !reduceMotion) { last = 0; raf = requestAnimationFrame(frame); }
+  };
+  const wake = () => {
+    if (!awake) { awake = true; carry = 0; stirring = true; }
+    start();
+  };
+
+  resize();
+  draw(field, size, false);
+  canvas.style.opacity = "1";
+  start();
+
+  const redraw = () => { resize(); draw(field, size, false); };
+  new ResizeObserver(redraw).observe(canvas);
+
+  document.addEventListener("visibilitychange", () => {
+    visible = document.visibilityState === "visible";
+    if (visible) start();
+  });
+
+  // Acompanha a troca de tema (claro/escuro) pela cor do canvas.
+  window.setInterval(() => {
+    if (!visible) return;
+    const next = getComputedStyle(canvas).color;
+    if (next !== size.color) { size.color = next; draw(field, size, false); }
+  }, 500);
+
+  if (!reduceMotion) {
+    window.addEventListener("pointermove", (event) => {
+      if (event.pointerType === "touch") return;
+      if (!pointer.inside) { pointer.lastX = event.clientX; pointer.lastY = event.clientY; pointer.inside = true; }
+      pointer.x = event.clientX;
+      pointer.y = event.clientY;
+      if (Math.abs(pointer.x - pointer.lastX) > 0.5 || Math.abs(pointer.y - pointer.lastY) > 0.5) wake();
+    }, { passive: true });
+    document.documentElement.addEventListener("pointerleave", () => { pointer.inside = false; });
+    window.addEventListener("pointerdown", (event) => {
+      // cliques no conteúdo (botões, campos, cartões, janelas) não são para o fundo
+      if (event.button !== 0 || (event.target instanceof Element &&
+          event.target.closest("a, button, input, textarea, select, label, [role='button'], .card, dialog, .appbar, .tabs"))) return;
+      pointer.x = pointer.lastX = event.clientX;
+      pointer.y = pointer.lastY = event.clientY;
+      pointer.inside = true;
+      shocks.push({ x: event.clientX, y: event.clientY, age: 0 });
+      if (shocks.length > 3) shocks.shift();
+      wake();
+    }, { passive: true });
+  }
 })();
 </script>
 </body>
