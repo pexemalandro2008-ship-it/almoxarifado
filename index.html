@@ -260,7 +260,15 @@ td.sel { cursor: default; }
 .ped-linhas li span:first-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .ped-lista { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ped-cards { display: flex; flex-direction: column; gap: 12px; }
-.ped-card { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.ped-card { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; border-left: 5px solid var(--line); }
+/* cor da situação: verde aprovado, amarelo aguardando, vermelho reprovado */
+.ped-card.st-pendente { border-left-color: var(--warn); }
+.ped-card.st-aprovado, .ped-card.st-parcial { border-left-color: var(--ok); }
+.ped-card.st-reprovado { border-left-color: var(--crit); }
+.pill.forte { padding: 3px 10px; }
+.pill.forte.ok, .pill.forte.in { background: var(--ok); color: var(--surface); }
+.pill.forte.warn { background: var(--warn); color: var(--surface); }
+.pill.forte.crit { background: var(--crit); color: var(--surface); }
 .ped-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .ped-head b { font-family: var(--f-display); font-size: 17px; }
 .ped-meta { font-size: 13px; color: var(--muted); }
@@ -1485,10 +1493,10 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         decisao = h("div", { class: "ped-decisao" }, sel, qtd, motivo);
       } else {
         const d = it.decisao === "aprovado"
-          ? h("span", { class: "pill ok", text: "Aprovado " + fmtQtd(it.qtd_aprovada) + " " + it.unidade })
-          : it.decisao === "reprovado" ? h("span", { class: "pill crit", text: "Reprovado" })
+          ? h("span", { class: "pill forte ok", text: "Aprovado " + fmtQtd(it.qtd_aprovada) + " " + it.unidade })
+          : it.decisao === "reprovado" ? h("span", { class: "pill forte crit", text: "Reprovado" })
           : p.status === "cancelado" ? h("span", { class: "pill adj", text: "Cancelado" })
-          : h("span", { class: "pill warn", text: "Aguardando" });
+          : h("span", { class: "pill forte warn", text: "Aguardando" });
         decisao = h("div", null, d, it.motivo ? h("span", { class: "ped-motivo", text: it.motivo }) : null);
       }
       const saldo = podeEditar() || state.me.papel === "consulta" ? saldoDe(it.item_id) : null;
@@ -1567,10 +1575,10 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       p.cancelado_em ? "cancelado em " + fmtDataHora(p.cancelado_em) : "",
     ].filter(Boolean).join(" · ");
 
-    return h("article", { class: "card ped-card" },
+    return h("article", { class: "card ped-card st-" + p.status },
       h("div", { class: "ped-head" },
         h("b", { text: "Pedido nº " + p.numero }),
-        h("span", { class: "pill " + cls, text: rot }),
+        h("span", { class: "pill forte " + cls, text: rot }),
         h("span", { class: "pill adj", text: p.setor })),
       h("div", { class: "ped-meta", text: historico }),
       p.obs ? h("p", { class: "ped-obs", text: p.obs }) : null,
