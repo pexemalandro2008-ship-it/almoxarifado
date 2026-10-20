@@ -467,8 +467,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   <!-- Estoque -->
   <section class="panel" id="p-estoque" role="tabpanel" aria-labelledby="t-estoque">
     <div class="toolbar">
-      <input class="grow" id="f-busca" type="search" placeholder="Buscar item, categoria ou local" aria-label="Buscar item">
-      <select id="f-cat" aria-label="Filtrar por categoria"><option value="">Todas as categorias</option></select>
+      <input class="grow" id="f-busca" type="search" placeholder="Buscar item ou local" aria-label="Buscar item">
+      <select id="f-cat" aria-label="Filtrar por categoria" hidden><option value="">Todas as categorias</option></select>
       <label class="check"><input type="checkbox" id="f-alerta"> Só abaixo do mínimo</label>
       <span class="spacer"></span>
       <button class="btn primary so-edicao" id="btn-novo" type="button">+ Novo item</button>
@@ -666,23 +666,25 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsanJ2cWFoc25maGN5am1jeXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwODA3MTgsImV4cCI6MjEwNzY1NjcxOH0.ig0jWeVyYNvaNQ9HvJItkpK-A20sXvo8aZ4fcXsV76c";
   const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
+  // o almoxarifado é só de papelaria: todo item fica na categoria Escritório
+  const CATEGORIA = "Escritório";
   const CATALOGO = [
-    ["Papel A4 75 g/m²", "Papelaria", "resma", 5, "Armário 1"],
-    ["Caneta esferográfica azul", "Escrita", "un", 20, "Armário 1"],
-    ["Caneta esferográfica preta", "Escrita", "un", 10, "Armário 1"],
-    ["Lápis HB", "Escrita", "un", 10, "Armário 1"],
-    ["Marca-texto amarelo", "Escrita", "un", 5, "Armário 1"],
-    ["Clipes nº 2/0", "Papelaria", "cx", 3, "Armário 1"],
-    ["Grampos 26/6", "Papelaria", "cx", 3, "Armário 1"],
-    ["Bloco adesivo 76 × 76 mm", "Papelaria", "bloco", 10, "Armário 1"],
-    ["Envelope ofício branco", "Papelaria", "pct", 2, "Armário 2"],
-    ["Pasta suspensa", "Arquivo", "un", 20, "Armário 2"],
-    ["Fita adesiva transparente 12 mm", "Papelaria", "rolo", 5, "Armário 1"],
-    ["Toner da impressora", "Impressão", "un", 1, "Armário 2"],
-    ["Pilha AA", "Diversos", "un", 8, "Armário 2"],
-    ["Copo descartável 200 ml", "Copa", "pct", 5, "Copa"],
-    ["Café 500 g", "Copa", "pct", 3, "Copa"],
-    ["Papel toalha interfolha", "Limpeza", "fardo", 2, "Depósito"],
+    ["Papel A4 75 g/m²", CATEGORIA, "resma", 5, "Armário 1"],
+    ["Caneta esferográfica azul", CATEGORIA, "un", 20, "Armário 1"],
+    ["Caneta esferográfica preta", CATEGORIA, "un", 10, "Armário 1"],
+    ["Caneta esferográfica vermelha", CATEGORIA, "un", 5, "Armário 1"],
+    ["Lápis HB", CATEGORIA, "un", 10, "Armário 1"],
+    ["Borracha branca", CATEGORIA, "un", 5, "Armário 1"],
+    ["Apontador", CATEGORIA, "un", 3, "Armário 1"],
+    ["Marca-texto amarelo", CATEGORIA, "un", 5, "Armário 1"],
+    ["Corretivo em fita", CATEGORIA, "un", 3, "Armário 1"],
+    ["Cola bastão", CATEGORIA, "un", 3, "Armário 1"],
+    ["Clipes nº 2/0", CATEGORIA, "cx", 3, "Armário 1"],
+    ["Grampos 26/6", CATEGORIA, "cx", 3, "Armário 1"],
+    ["Bloco adesivo 76 × 76 mm", CATEGORIA, "bloco", 10, "Armário 1"],
+    ["Envelope ofício branco", CATEGORIA, "pct", 2, "Armário 1"],
+    ["Envelope saco kraft A4", CATEGORIA, "pct", 2, "Armário 1"],
+    ["Fita adesiva transparente 12 mm", CATEGORIA, "rolo", 5, "Armário 1"],
   ];
   const UNIDADES = [["un", "Unidade (un)"], ["cx", "Caixa (cx)"], ["pct", "Pacote (pct)"], ["resma", "Resma (500 folhas)"], ["rolo", "Rolo"], ["bloco", "Bloco"], ["fardo", "Fardo"], ["par", "Par"], ["kg", "Quilo (kg)"], ["L", "Litro (L)"]];
   const PAPEL = { admin: "Administrador", operador: "Operador", consulta: "Consulta", solicitante: "Solicitante" };
@@ -979,7 +981,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       card.append(h("div", { class: "empty" },
         ico,
         h("h2", { text: "Nenhum item cadastrado ainda" }),
-        h("p", { text: "Cadastre o que fica no almoxarifado: papel, canetas, toner, itens de copa. Depois registre as entradas (compras) e as saídas (retiradas por setor) para o saldo se atualizar sozinho." }),
+        h("p", { text: "Cadastre o material de papelaria do almoxarifado: papel, canetas, lápis, envelopes. Depois registre as entradas (compras) e as saídas (retiradas por setor) para o saldo se atualizar sozinho." }),
         h("p", { class: "so-edicao", text: "O catálogo básico cria 16 itens comuns de escritório com saldo zero e estoque mínimo sugerido. Você pode editar ou excluir qualquer um depois." }),
         h("div", { class: "row so-edicao" },
           h("button", { class: "btn primary", type: "button", onclick: () => abrirFormItem() }, "Cadastrar primeiro item"),
@@ -1056,7 +1058,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       tdSel.addEventListener("click", (e) => { e.stopPropagation(); if (e.target === tdSel) chk.click(); });
       const tr = h("tr", { class: "clickable", tabindex: "0" },
         tdSel,
-        h("td", null, h("div", { class: "item-name", text: it.nome }), h("div", { class: "item-sub", text: [it.categoria, it.local].filter(Boolean).join(" · ") })),
+        h("td", null, h("div", { class: "item-name", text: it.nome }), h("div", { class: "item-sub", text: it.local || "" })),
         h("td", { class: "hide-sm", text: it.local || "—" }),
         h("td", { class: "r" }, h("span", { class: "num", text: fmtQtd(saldo) + " " + (it.unidade || "un") }), h("div", { class: "gauge" }, h("i", { class: s.cls === "ok" ? "" : s.cls, style: "width:" + pct + "%" }))),
         h("td", { class: "r num hide-sm", text: min > 0 ? fmtQtd(min) : "—" }),
@@ -1091,7 +1093,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     dl.replaceChildren(...[...new Set(valores.filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR")).map((v) => h("option", { value: v })));
   }
   function preencherListas() {
-    preencherDatalist("#dl-categorias", state.itens.map((i) => i.categoria).concat(["Papelaria", "Escrita", "Arquivo", "Impressão", "Copa", "Limpeza", "Diversos"]));
+    preencherDatalist("#dl-categorias", [CATEGORIA]);
     preencherDatalist("#dl-locais", state.itens.map((i) => i.local));
     preencherDatalist("#dl-setores", state.movs.map((m) => m.setor).concat(Object.values(state.perfis).map((p) => p.setor), SETORES_PADRAO));
     preencherDatalist("#dl-pessoas", state.movs.map((m) => m.pessoa));
@@ -1667,7 +1669,6 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     const novo = !item;
     const f = (id, rot, input) => h("div", { class: "field" }, h("label", { for: id, text: rot }), input);
     const nome = h("input", { id: "i-nome", required: true, value: item ? item.nome : "", autocomplete: "off" });
-    const cat = h("input", { id: "i-cat", list: "dl-categorias", value: item ? item.categoria || "" : "", autocomplete: "off" });
     const unidades = UNIDADES.slice();
     const unAtual = item ? item.unidade || "un" : "un";
     if (!unidades.some(([v]) => v === unAtual)) unidades.push([unAtual, unAtual]);
@@ -1685,7 +1686,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     const form = h("form", { class: "dlg-body", novalidate: true },
       h("div", { class: "fields" },
         h("div", { class: "field", style: "grid-column: 1 / -1" }, h("label", { for: "i-nome", text: "Nome do item" }), nome),
-        f("i-cat", "Categoria", cat), campoUn, f("i-min", "Estoque mínimo (quantidade)", min), f("i-local", "Local", local),
+        campoUn, f("i-min", "Estoque mínimo (quantidade)", min), f("i-local", "Local", local),
         novo ? f("i-saldo", "Saldo atual (opcional)", saldoIni) : null,
         novo ? f("i-custo", "Custo unitário (R$, opcional)", custoIni) : null),
       erro,
@@ -1693,7 +1694,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       erro.hidden = true;
-      const dados = { nome: nome.value.trim(), categoria: cat.value.trim(), unidade: un.value || "un", minimo: round(parseFloat(min.value) || 0), local: local.value.trim() };
+      const dados = { nome: nome.value.trim(), categoria: CATEGORIA, unidade: un.value || "un", minimo: round(parseFloat(min.value) || 0), local: local.value.trim() };
       if (!dados.nome) { erro.textContent = "Informe o nome do item."; erro.hidden = false; nome.focus(); return; }
       if (state.itens.some((i) => i.id !== (item && item.id) && norm(i.nome) === norm(dados.nome))) { erro.textContent = "Já existe um item com esse nome."; erro.hidden = false; return; }
       comBusy(salvar, async () => {
@@ -1761,7 +1762,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       h("div", null, h("span", { class: "pill " + s.cls, text: s.txt })),
       h("div", { class: "facts" },
         fato("Saldo", fmtQtd(it.saldo) + " " + un), fato("Mínimo", num(it.minimo) > 0 ? fmtQtd(it.minimo) + " " + un : "Não definido"),
-        fato("Local", it.local || "—"), fato("Categoria", it.categoria || "—"),
+        fato("Local", it.local || "—"), fato("Unidade", (UNIDADES.find(([v]) => v === un) || [un, un])[1]),
         fato("Custo médio", num(it.custo_medio) > 0 ? fmtBRL(it.custo_medio) : "—"), fato("Valor em estoque", fmtBRL(Math.max(num(it.saldo), 0) * num(it.custo_medio)))),
       h("div", { class: "row-actions so-edicao" },
         h("button", { class: "btn primary", type: "button", onclick: () => abrirMovimento(it.id, "entrada") }, "Registrar entrada"),
