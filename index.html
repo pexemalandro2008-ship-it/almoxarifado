@@ -289,6 +289,8 @@ td.sel { cursor: default; }
 .credenciais pre { margin: 0; white-space: pre-wrap; font-family: var(--f-mono); font-size: 13px; color: var(--ink); background: var(--surface); padding: 10px; border-radius: 6px; overflow-wrap: anywhere; }
 .inline-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .inline-row input, .inline-row select { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 8px; min-width: 0; }
+.field .inline-row > select, .field .inline-row > input { width: auto; flex: 1 1 120px; }
+.field .inline-row > input.curto { flex: 0 1 7em; }
 
 /* Login */
 .login { min-height: 100vh; display: grid; place-items: center; padding: 72px 16px 24px; position: relative; }
@@ -495,12 +497,16 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
             <label for="m-qtd">Quantidade</label>
             <input id="m-qtd" type="number" min="0" step="any" inputmode="decimal" required>
           </div>
+          <div class="field" id="m-modo-campo" hidden>
+            <label for="m-modo">Lançar em</label>
+            <select id="m-modo"></select>
+          </div>
           <div class="field">
             <label for="m-data">Data</label>
             <input id="m-data" type="date" required>
           </div>
           <div class="field only-in">
-            <label for="m-custo">Custo unitário (R$)</label>
+            <label for="m-custo" id="m-custo-label">Custo unitário (R$)</label>
             <input id="m-custo" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00">
           </div>
           <div class="field only-in">
@@ -737,6 +743,22 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   }
   const precisaComprar = (it) => num(it.minimo) > 0 && num(it.saldo) < num(it.minimo);
   const sugestao = (it) => Math.max(Math.ceil(num(it.minimo) * 2 - Math.max(num(it.saldo), 0)), 1);
+
+  // embalagem de compra (ex.: caixa com 50 un); o estoque é sempre contado na unidade do item
+  const EMBALAGENS = [["", "Não se aplica"], ["caixa", "Caixa"], ["pacote", "Pacote"], ["fardo", "Fardo"], ["resma", "Resma"], ["rolo", "Rolo"], ["bloco", "Bloco"]];
+  const temEmbalagem = (it) => !!(it && it.embalagem && num(it.qtd_embalagem) > 1);
+  const nomeEmb = (it, n) => {
+    const base = ((EMBALAGENS.find(([v]) => v === it.embalagem) || [it.embalagem, it.embalagem])[1] || "").toLowerCase();
+    return n === 1 ? base : base + "s";
+  };
+  const descEmb = (it) => (temEmbalagem(it) ? nomeEmb(it, 1) + " com " + fmtQtd(it.qtd_embalagem) + " " + (it.unidade || "un") : "");
+  // sugestão de compra arredondada para embalagens fechadas
+  function compraSugerida(it) {
+    const un = it.unidade || "un", s = sugestao(it);
+    if (!temEmbalagem(it)) return { texto: fmtQtd(s) + " " + un, unidades: s };
+    const pac = Math.ceil(s / num(it.qtd_embalagem)), unidades = pac * num(it.qtd_embalagem);
+    return { texto: fmtQtd(pac) + " " + nomeEmb(it, pac) + " (" + fmtQtd(unidades) + " " + un + ")", unidades };
+  }
 
   let toastTimer;
   function toast(msg, tipo) {
@@ -1130,17 +1152,33 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     $("#m-enviar").textContent = tipo === "entrada" ? "Registrar entrada" : "Registrar saída";
     const it = itemPorId($("#m-item").value);
     const info = $("#m-saldo");
+    // entrada de item com embalagem: permite lançar em embalagens fechadas
+    const modoCampo = $("#m-modo-campo"), modo = $("#m-modo");
+    const usaEmb = tipo === "entrada" && temEmbalagem(it);
+    modoCampo.hidden = !usaEmb;
+    if (usaEmb && modo.dataset.item !== it.id) {
+      modo.replaceChildren(
+        h("option", { value: "emb" }, nomeEmb(it, 2).replace(/^./, (c) => c.toUpperCase()) + " (" + fmtQtd(it.qtd_embalagem) + " " + (it.unidade || "un") + " cada)"),
+        h("option", { value: "un" }, "Unidades (" + (it.unidade || "un") + ")"));
+      modo.dataset.item = it.id;
+    }
+    const emEmb = usaEmb && modo.value === "emb";
+    $("#m-custo-label").textContent = emEmb ? "Custo por " + nomeEmb(it, 1) + " (R$)" : "Custo unitário (R$)";
     if (!it) { info.textContent = "Escolha um item para ver o saldo."; return; }
-    const qv = parseFloat($("#m-qtd").value) || 0;
+    const fator = emEmb ? num(it.qtd_embalagem) : 1;
+    const qv = (parseFloat($("#m-qtd").value) || 0) * fator;
     const un = it.unidade || "un";
     const depois = tipo === "entrada" ? num(it.saldo) + qv : num(it.saldo) - qv;
-    info.replaceChildren(
+    // replaceChildren não achata listas: monta os pedaços e achata antes
+    info.replaceChildren(...[
+      emEmb && qv > 0 ? [h("b", { class: "num", text: "= " + fmtQtd(qv) + " " + un }), " · "] : null,
       "Saldo atual: ", h("b", { class: "num", text: fmtQtd(it.saldo) + " " + un }),
       qv > 0 ? [" · depois deste registro: ", h("b", { class: "num", text: fmtQtd(depois) + " " + un })] : null,
-      num(it.custo_medio) > 0 ? [" · custo médio ", h("span", { class: "num", text: fmtBRL(it.custo_medio) })] : null);
+      num(it.custo_medio) > 0 ? [" · custo médio ", h("span", { class: "num", text: fmtBRL(it.custo_medio) })] : null,
+    ].flat().filter((x) => x != null));
   }
   document.querySelectorAll('input[name="tipo"]').forEach((r) => r.addEventListener("change", () => { $("#m-erro").hidden = true; atualizarFormMov(); }));
-  ["#m-item", "#m-qtd"].forEach((s) => $(s).addEventListener("input", atualizarFormMov));
+  ["#m-item", "#m-qtd", "#m-modo"].forEach((s) => $(s).addEventListener("input", atualizarFormMov));
   $("#m-data").value = hojeISO();
 
   $("#mov-form").addEventListener("submit", (e) => {
@@ -1149,20 +1187,23 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     erro.hidden = true;
     const falha = (msg) => { erro.textContent = msg; erro.hidden = false; };
     const it = itemPorId($("#m-item").value);
-    const qtd = parseFloat($("#m-qtd").value);
     const tipo = tipoAtual();
     if (!it) return falha("Escolha o item.");
-    if (!(qtd > 0)) return falha("Informe uma quantidade maior que zero.");
+    const digitado = parseFloat($("#m-qtd").value);
+    if (!(digitado > 0)) return falha("Informe uma quantidade maior que zero.");
+    // em embalagens: converte para unidades e o custo da embalagem para custo por unidade
+    const fator = tipo === "entrada" && temEmbalagem(it) && $("#m-modo").value === "emb" ? num(it.qtd_embalagem) : 1;
+    const qtd = round(digitado * fator);
     if (tipo === "saida" && qtd > num(it.saldo)) {
       return falha("Saldo insuficiente: há " + fmtQtd(it.saldo) + " " + (it.unidade || "un") + ". Se o saldo estiver errado, faça uma contagem física no item.");
     }
     const extra = tipo === "entrada"
-      ? { custoUnit: parseFloat($("#m-custo").value) || 0, fornecedor: $("#m-fornecedor").value.trim(), nf: $("#m-nf").value.trim(), obs: $("#m-obs").value.trim() }
+      ? { custoUnit: (parseFloat($("#m-custo").value) || 0) / fator, fornecedor: $("#m-fornecedor").value.trim(), nf: $("#m-nf").value.trim(), obs: $("#m-obs").value.trim() }
       : { setor: $("#m-setor").value.trim(), pessoa: $("#m-pessoa").value.trim(), obs: $("#m-obs").value.trim() };
     comBusy($("#m-enviar"), async () => {
       try { await registrar(tipo, it, qtd, extra, $("#m-data").value); }
       catch (err) { falha(msgErro(err)); return; }
-      toast((tipo === "entrada" ? "Entrada" : "Saída") + " registrada: " + fmtQtd(qtd) + " " + (it.unidade || "un") + " de " + it.nome + ".");
+      toast((tipo === "entrada" ? "Entrada" : "Saída") + " registrada: " + (fator > 1 ? fmtQtd(digitado) + " " + nomeEmb(it, digitado) + " = " : "") + fmtQtd(qtd) + " " + (it.unidade || "un") + " de " + it.nome + ".");
       ["#m-qtd", "#m-custo", "#m-nf", "#m-obs"].forEach((s) => { $(s).value = ""; });
       await carregarTudo();
     });
@@ -1291,7 +1332,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   // ---------- compras ----------
   function textoLista(lista) {
     return "Lista de compras — " + new Date().toLocaleDateString("pt-BR") + "\n" +
-      lista.map((i) => "- " + i.nome + ": " + fmtQtd(sugestao(i)) + " " + (i.unidade || "un") + " (saldo " + fmtQtd(i.saldo) + ", mínimo " + fmtQtd(i.minimo) + ")").join("\n");
+      lista.map((i) => "- " + i.nome + ": " + compraSugerida(i).texto + " (saldo " + fmtQtd(i.saldo) + ", mínimo " + fmtQtd(i.minimo) + ")").join("\n");
   }
   function copiar(texto, alvo) {
     const fallback = () => {
@@ -1311,9 +1352,9 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       return;
     }
     const ul = h("ul", null, lista.map((i) => h("li", null,
-      h("span", { text: i.nome }), h("span", { class: "qty", text: fmtQtd(sugestao(i)) + " " + (i.unidade || "un") }),
-      h("small", { text: "Saldo " + fmtQtd(i.saldo) + " · mínimo " + fmtQtd(i.minimo) + (num(i.custo_medio) > 0 ? " · estimativa " + fmtBRL(sugestao(i) * num(i.custo_medio)) : "") }))));
-    const total = lista.reduce((s, i) => s + sugestao(i) * num(i.custo_medio), 0);
+      h("span", { text: i.nome }), h("span", { class: "qty", text: compraSugerida(i).texto }),
+      h("small", { text: "Saldo " + fmtQtd(i.saldo) + " · mínimo " + fmtQtd(i.minimo) + (num(i.custo_medio) > 0 ? " · estimativa " + fmtBRL(compraSugerida(i).unidades * num(i.custo_medio)) : "") }))));
+    const total = lista.reduce((s, i) => s + compraSugerida(i).unidades * num(i.custo_medio), 0);
     const btn = h("button", { class: "btn", type: "button" }, "Copiar lista");
     btn.addEventListener("click", () => copiar(textoLista(lista), ul));
     body.replaceChildren(h("div", { class: "note" },
@@ -1678,6 +1719,20 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       h("label", { for: "i-un", text: "Unidade (como o item é contado)" }), un,
       h("small", { text: "Ex.: caneta por unidade, clipes por caixa, papel por resma. A quantidade vai em Estoque mínimo e nas entradas." }));
     const min = h("input", { id: "i-min", type: "number", min: "0", step: "any", value: item ? num(item.minimo) : "", inputmode: "decimal" });
+    const emb = h("select", { id: "i-emb" }, EMBALAGENS.map(([v, rot]) => h("option", { value: v }, rot)));
+    emb.value = item && item.embalagem ? item.embalagem : "";
+    const qtdEmb = h("input", { id: "i-qemb", class: "curto", type: "number", min: "1", step: "any", inputmode: "decimal", placeholder: "Ex.: 50", value: item && item.qtd_embalagem ? num(item.qtd_embalagem) : "" });
+    const unEmb = h("span", { class: "muted" });
+    const sincUnEmb = () => { unEmb.textContent = un.value || "un"; };
+    un.addEventListener("change", sincUnEmb);
+    sincUnEmb();
+    const campoEmb = h("div", { class: "field", style: "grid-column: 1 / -1" },
+      h("label", { for: "i-emb", text: "Como é comprado (opcional)" }),
+      h("div", { class: "inline-row" }, emb, h("span", { class: "muted", text: "com" }), qtdEmb, unEmb),
+      h("small", { text: "Ex.: caneta comprada em caixa com 50 un. Na entrada dá para lançar em caixas, e o sistema converte para unidades." }));
+    const sincEmb = () => { qtdEmb.disabled = !emb.value; };
+    emb.addEventListener("change", sincEmb);
+    sincEmb();
     const local = h("input", { id: "i-local", list: "dl-locais", value: item ? item.local || "" : "", autocomplete: "off", placeholder: "Ex.: Armário 1" });
     const saldoIni = h("input", { id: "i-saldo", type: "number", min: "0", step: "any", inputmode: "decimal", placeholder: "0" });
     const custoIni = h("input", { id: "i-custo", type: "number", min: "0", step: "0.01", inputmode: "decimal", placeholder: "0,00" });
@@ -1686,7 +1741,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     const form = h("form", { class: "dlg-body", novalidate: true },
       h("div", { class: "fields" },
         h("div", { class: "field", style: "grid-column: 1 / -1" }, h("label", { for: "i-nome", text: "Nome do item" }), nome),
-        campoUn, f("i-min", "Estoque mínimo (quantidade)", min), f("i-local", "Local", local),
+        campoUn, f("i-min", "Estoque mínimo (quantidade)", min), campoEmb, f("i-local", "Local", local),
         novo ? f("i-saldo", "Saldo atual (opcional)", saldoIni) : null,
         novo ? f("i-custo", "Custo unitário (R$, opcional)", custoIni) : null),
       erro,
@@ -1694,7 +1749,9 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       erro.hidden = true;
-      const dados = { nome: nome.value.trim(), categoria: CATEGORIA, unidade: un.value || "un", minimo: round(parseFloat(min.value) || 0), local: local.value.trim() };
+      const dados = { nome: nome.value.trim(), categoria: CATEGORIA, unidade: un.value || "un", minimo: round(parseFloat(min.value) || 0), local: local.value.trim(),
+        embalagem: emb.value || null, qtd_embalagem: emb.value ? round(parseFloat(qtdEmb.value) || 0) : null };
+      if (dados.embalagem && !(dados.qtd_embalagem > 1)) { erro.textContent = "Informe quantas unidades vêm em cada " + emb.options[emb.selectedIndex].text.toLowerCase() + " (mais de 1)."; erro.hidden = false; qtdEmb.focus(); return; }
       if (!dados.nome) { erro.textContent = "Informe o nome do item."; erro.hidden = false; nome.focus(); return; }
       if (state.itens.some((i) => i.id !== (item && item.id) && norm(i.nome) === norm(dados.nome))) { erro.textContent = "Já existe um item com esse nome."; erro.hidden = false; return; }
       comBusy(salvar, async () => {
@@ -1762,7 +1819,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       h("div", null, h("span", { class: "pill " + s.cls, text: s.txt })),
       h("div", { class: "facts" },
         fato("Saldo", fmtQtd(it.saldo) + " " + un), fato("Mínimo", num(it.minimo) > 0 ? fmtQtd(it.minimo) + " " + un : "Não definido"),
-        fato("Local", it.local || "—"), fato("Unidade", (UNIDADES.find(([v]) => v === un) || [un, un])[1]),
+        fato("Local", it.local || "—"), fato("Unidade", (UNIDADES.find(([v]) => v === un) || [un, un])[1]), fato("Comprado em", descEmb(it) || "Unidades avulsas"),
         fato("Custo médio", num(it.custo_medio) > 0 ? fmtBRL(it.custo_medio) : "—"), fato("Valor em estoque", fmtBRL(Math.max(num(it.saldo), 0) * num(it.custo_medio)))),
       h("div", { class: "row-actions so-edicao" },
         h("button", { class: "btn primary", type: "button", onclick: () => abrirMovimento(it.id, "entrada") }, "Registrar entrada"),
