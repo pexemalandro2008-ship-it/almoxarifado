@@ -299,6 +299,9 @@ td.sel { cursor: default; }
 .inline-row input, .inline-row select { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 5px 8px; min-width: 0; }
 .field .inline-row > select, .field .inline-row > input { width: auto; flex: 1 1 120px; }
 .field .inline-row > input.curto { flex: 0 1 7em; }
+.email-grupo { flex-wrap: nowrap; gap: 0; }
+.field .email-grupo > input { flex: 1 1 60px; border-radius: 10px 0 0 10px; }
+.email-grupo > span { white-space: nowrap; padding: 0 10px; align-self: stretch; display: flex; align-items: center; border: 1px solid var(--line); border-left: 0; border-radius: 0 10px 10px 0; background: var(--surface-2); font-size: 13px; }
 
 /* Login */
 .login { min-height: 100vh; display: grid; place-items: center; padding: 72px 16px 24px; position: relative; }
@@ -622,7 +625,10 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       <form class="card p-form" id="p-form" novalidate>
         <h3>Adicionar pessoa</h3>
         <div class="field"><label for="p-nome">Nome</label><input id="p-nome" autocomplete="off" required></div>
-        <div class="field"><label for="p-email">E-mail</label><input id="p-email" type="email" autocomplete="off" required></div>
+        <div class="field">
+          <label for="p-email">E-mail</label>
+          <div class="inline-row email-grupo"><input id="p-email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="nome" required><span class="muted" id="p-dominio">@corticalmedical.com.br</span></div>
+        </div>
         <div class="field">
           <label for="p-senha">Senha provisória</label>
           <div class="inline-row"><input id="p-senha" autocomplete="off" style="flex:1 1 140px" required><button class="btn small" type="button" id="p-gerar">Gerar</button></div>
@@ -1596,11 +1602,25 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     return Array.from(buf, (n) => letras[n % letras.length]).join("");
   }
   $("#p-gerar").addEventListener("click", () => { $("#p-senha").value = gerarSenha(); });
+
+  // e-mail sempre no domínio da empresa: o administrador digita só a parte antes do @
+  const DOMINIO = "@corticalmedical.com.br";
+  const parteEmail = (s) => norm(s).replace(/@.*$/, "").replace(/\s+/g, "").replace(/[^a-z0-9._-]/g, "");
+  let emailEditado = false;
+  $("#p-email").addEventListener("input", () => {
+    emailEditado = true;
+    const limpo = parteEmail($("#p-email").value);
+    if (limpo !== $("#p-email").value) $("#p-email").value = limpo;
+  });
+  $("#p-nome").addEventListener("input", () => {
+    if (!emailEditado) $("#p-email").value = parteEmail(($("#p-nome").value.trim().split(/\s+/)[0]) || "");
+  });
   $("#p-form").addEventListener("submit", (e) => {
     e.preventDefault();
     const erro = $("#p-erro");
     erro.hidden = true;
-    const nome = $("#p-nome").value.trim(), email = $("#p-email").value.trim(), senha = $("#p-senha").value.trim(), papel = $("#p-papel").value, setor = $("#p-setor").value.trim();
+    const local = parteEmail($("#p-email").value);
+    const nome = $("#p-nome").value.trim(), email = local ? local + DOMINIO : "", senha = $("#p-senha").value.trim(), papel = $("#p-papel").value, setor = $("#p-setor").value.trim();
     const falha = (m) => { erro.textContent = m; erro.hidden = false; };
     if (!nome) return falha("Informe o nome.");
     if (!email) return falha("Informe o e-mail.");
@@ -1617,6 +1637,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         h("div", { class: "row-actions" }, h("button", { class: "btn small", type: "button", onclick: () => copiar(texto, pre) }, "Copiar dados de acesso")));
       box.hidden = false;
       ["#p-nome", "#p-email", "#p-senha", "#p-setor"].forEach((s) => { $(s).value = ""; });
+      emailEditado = false;
       await carregarTudo();
     });
   });
