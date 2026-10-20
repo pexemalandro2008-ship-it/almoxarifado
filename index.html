@@ -83,6 +83,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   mask-image: radial-gradient(ellipse 85% 80% at 50% 50%, #000 45%, transparent 100%);
 }
 @media (prefers-reduced-motion: reduce) { #dot-field { transition: none; } }
+body.logado #dot-field { display: none; }
 
 /* Barra superior fixa */
 .appbar { position: sticky; top: 0; z-index: 5; background: var(--bg); background: color-mix(in srgb, var(--bg) 85%, transparent); -webkit-backdrop-filter: saturate(1.4) blur(10px); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
@@ -852,6 +853,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   function mostrarTela(qual) {
     $("#tela-login").hidden = qual === "app";
     $("#app").hidden = qual !== "app";
+    // o fundo de pontos aparece só na tela de login
+    document.body.classList.toggle("logado", qual === "app");
   }
   async function mostrarLogin() {
     clearInterval(state.timer);
@@ -2226,7 +2229,9 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   const pointer = { x: 0, y: 0, lastX: 0, lastY: 0, inside: false };
   const shocks = [];
   let time = 0, last = 0, lastTone = 0, carry = 0;
-  let stirring = false, awake = false, raf = 0, visible = document.visibilityState === "visible";
+  // só anima com a aba visível e na tela de login (body sem a classe "logado")
+  const ativo = () => document.visibilityState === "visible" && !document.body.classList.contains("logado");
+  let stirring = false, awake = false, raf = 0, visible = ativo();
 
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
@@ -2287,10 +2292,14 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   const redraw = () => { resize(); draw(field, size, false); };
   new ResizeObserver(redraw).observe(canvas);
 
-  document.addEventListener("visibilitychange", () => {
-    visible = document.visibilityState === "visible";
+  const atualizarAtivo = () => {
+    const antes = visible;
+    visible = ativo();
+    if (visible && !antes) redraw();
     if (visible) start();
-  });
+  };
+  document.addEventListener("visibilitychange", atualizarAtivo);
+  new MutationObserver(atualizarAtivo).observe(document.body, { attributes: true, attributeFilter: ["class"] });
 
   // Acompanha a troca de tema (claro/escuro) pela cor do canvas.
   window.setInterval(() => {
