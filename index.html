@@ -1730,7 +1730,14 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       h("label", { for: "i-emb", text: "Como é comprado (opcional)" }),
       h("div", { class: "inline-row" }, emb, h("span", { class: "muted", text: "com" }), qtdEmb, unEmb),
       h("small", { text: "Ex.: caneta comprada em caixa com 50 un. Na entrada dá para lançar em caixas, e o sistema converte para unidades." }));
-    const sincEmb = () => { qtdEmb.disabled = !emb.value; };
+    // com embalagem escolhida, saldo inicial e custo do cadastro são informados por embalagem
+    const lblSaldo = h("label", { for: "i-saldo" }), lblCusto = h("label", { for: "i-custo" });
+    const sincEmb = () => {
+      qtdEmb.disabled = !emb.value;
+      const nomeE = emb.value ? emb.options[emb.selectedIndex].text.toLowerCase() : "";
+      lblSaldo.textContent = nomeE ? "Saldo atual (em " + nomeE + "s, opcional)" : "Saldo atual (opcional)";
+      lblCusto.textContent = nomeE ? "Custo por " + nomeE + " (R$, opcional)" : "Custo unitário (R$, opcional)";
+    };
     emb.addEventListener("change", sincEmb);
     sincEmb();
     const local = h("input", { id: "i-local", list: "dl-locais", value: item ? item.local || "" : "", autocomplete: "off", placeholder: "Ex.: Armário 1" });
@@ -1742,8 +1749,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       h("div", { class: "fields" },
         h("div", { class: "field", style: "grid-column: 1 / -1" }, h("label", { for: "i-nome", text: "Nome do item" }), nome),
         campoUn, f("i-min", "Estoque mínimo (quantidade)", min), campoEmb, f("i-local", "Local", local),
-        novo ? f("i-saldo", "Saldo atual (opcional)", saldoIni) : null,
-        novo ? f("i-custo", "Custo unitário (R$, opcional)", custoIni) : null),
+        novo ? h("div", { class: "field" }, lblSaldo, saldoIni) : null,
+        novo ? h("div", { class: "field" }, lblCusto, custoIni) : null),
       erro,
       h("div", { class: "row-actions" }, salvar, h("button", { class: "btn", type: "button", onclick: () => (novo ? fecharDialogo() : abrirDetalhe(item.id)) }, "Cancelar")));
     form.addEventListener("submit", (e) => {
@@ -1752,6 +1759,12 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       const dados = { nome: nome.value.trim(), categoria: CATEGORIA, unidade: un.value || "un", minimo: round(parseFloat(min.value) || 0), local: local.value.trim(),
         embalagem: emb.value || null, qtd_embalagem: emb.value ? round(parseFloat(qtdEmb.value) || 0) : null };
       if (dados.embalagem && !(dados.qtd_embalagem > 1)) { erro.textContent = "Informe quantas unidades vêm em cada " + emb.options[emb.selectedIndex].text.toLowerCase() + " (mais de 1)."; erro.hidden = false; qtdEmb.focus(); return; }
+      // unidade = embalagem (ex.: unidade "Caixa" e comprado em "Caixa") não faz sentido: a unidade é como o item sai do armário
+      const MESMA = { cx: "caixa", pct: "pacote", fardo: "fardo", resma: "resma", rolo: "rolo", bloco: "bloco" };
+      if (dados.embalagem && MESMA[dados.unidade] === dados.embalagem) {
+        erro.textContent = "A unidade deve ser como o item sai do armário (ex.: Unidade (un) para canetas). A " + emb.options[emb.selectedIndex].text.toLowerCase() + " fica só em \"Como é comprado\".";
+        erro.hidden = false; un.focus(); return;
+      }
       if (!dados.nome) { erro.textContent = "Informe o nome do item."; erro.hidden = false; nome.focus(); return; }
       if (state.itens.some((i) => i.id !== (item && item.id) && norm(i.nome) === norm(dados.nome))) { erro.textContent = "Já existe um item com esse nome."; erro.hidden = false; return; }
       comBusy(salvar, async () => {
@@ -1759,8 +1772,10 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
           let criado;
           try { criado = await q(sb.from("itens").insert(dados).select("*").single()); }
           catch (err) { erro.textContent = msgErro(err); erro.hidden = false; return; }
-          const s = parseFloat(saldoIni.value) || 0;
-          if (s > 0) await registrar("entrada", criado, s, { custoUnit: parseFloat(custoIni.value) || 0, obs: "Saldo inicial" });
+          // com embalagem, converte caixas → unidades e custo da caixa → custo por unidade
+          const fatorIni = dados.embalagem ? dados.qtd_embalagem : 1;
+          const s = (parseFloat(saldoIni.value) || 0) * fatorIni;
+          if (s > 0) await registrar("entrada", criado, s, { custoUnit: (parseFloat(custoIni.value) || 0) / fatorIni, obs: "Saldo inicial" });
           toast("Item cadastrado: " + dados.nome + ".");
           fecharDialogo();
           await carregarTudo();
