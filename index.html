@@ -1423,6 +1423,60 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       h("div", { class: "note-actions" }, btn)));
   }
 
+  // ---------- confete: comemora o pedido enviado, saindo do botão ----------
+  function confete(origem) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !origem) return;
+    const r = origem.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const tela = document.createElement("canvas");
+    tela.setAttribute("aria-hidden", "true");
+    tela.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50";
+    document.body.append(tela);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    tela.width = innerWidth * dpr;
+    tela.height = innerHeight * dpr;
+    const c = tela.getContext("2d");
+    c.scale(dpr, dpr);
+    const cores = ["#ff3ea5", "#ff9f1c", "#ffe14d", "#22d3ee", "#7ee36b", "#f72585", "#ff5e5e"];
+    const formas = ["fita", "quadrado", "bolinha", "risco"];
+    const pecas = Array.from({ length: 140 }, () => {
+      const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.15; // leque para cima
+      const vel = 6 + Math.random() * 11;
+      return {
+        x: cx + (Math.random() - 0.5) * r.width * 0.6, y: cy,
+        vx: Math.cos(ang) * vel, vy: Math.sin(ang) * vel,
+        giro: Math.random() * Math.PI, vgiro: (Math.random() - 0.5) * 0.35,
+        cor: cores[(Math.random() * cores.length) | 0], forma: formas[(Math.random() * formas.length) | 0],
+        tam: 4 + Math.random() * 6, vida: 0, max: 90 + Math.random() * 50,
+      };
+    });
+    let quadro;
+    const passo = () => {
+      c.clearRect(0, 0, innerWidth, innerHeight);
+      let vivas = 0;
+      for (const p of pecas) {
+        if (p.vida > p.max) continue;
+        vivas++;
+        p.vida++;
+        p.vx *= 0.985; p.vy = p.vy * 0.985 + 0.28; // arrasto e gravidade
+        p.x += p.vx; p.y += p.vy; p.giro += p.vgiro;
+        c.save();
+        c.globalAlpha = Math.max(0, 1 - Math.max(0, p.vida - p.max * 0.6) / (p.max * 0.4));
+        c.translate(p.x, p.y);
+        c.rotate(p.giro);
+        c.fillStyle = c.strokeStyle = p.cor;
+        if (p.forma === "bolinha") { c.beginPath(); c.arc(0, 0, p.tam / 2, 0, Math.PI * 2); c.fill(); }
+        else if (p.forma === "quadrado") c.fillRect(-p.tam / 2, -p.tam / 2, p.tam, p.tam * 0.8);
+        else if (p.forma === "fita") c.fillRect(-p.tam, -1.5, p.tam * 2, 3);
+        else { c.lineWidth = 2; c.beginPath(); c.moveTo(0, -p.tam); c.lineTo(0, p.tam); c.stroke(); }
+        c.restore();
+      }
+      if (vivas) quadro = requestAnimationFrame(passo);
+      else { cancelAnimationFrame(quadro); tela.remove(); }
+    };
+    quadro = requestAnimationFrame(passo);
+  }
+
   // ---------- alterações (auditoria, administrador) ----------
   const CAMPO = {
     nome: "nome", categoria: "categoria", unidade: "unidade", minimo: "estoque mínimo", local: "local",
@@ -1536,6 +1590,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       state.pedLinhas = [];
       $("#ped-obs").value = "";
       renderLinhasPedido();
+      confete($("#ped-enviar"));
       toast("Pedido nº " + criado.numero + " enviado. Acompanhe a aprovação na lista ao lado.");
       await carregarTudo();
     });
