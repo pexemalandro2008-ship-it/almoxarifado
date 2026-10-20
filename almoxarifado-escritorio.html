@@ -1,0 +1,1085 @@
+<title>Almoxarifado do Escritório</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: cabeçalho com resumo do estoque, abas de trabalho, uma coluna de até 1120px; a lista de compras é um bloco de post-it */
+:root {
+  --bg: #f2f4f8;
+  --surface: #ffffff;
+  --surface-2: #f6f7fb;
+  --ink: #141b33;
+  --muted: #5a6580;
+  --line: #d8dde8;
+  --accent: #2a3ed0;
+  --accent-soft: #e5e8fb;
+  --on-accent: #ffffff;
+  --warn: #8f4500;
+  --warn-bg: #fdefd9;
+  --crit: #b42318;
+  --crit-bg: #fde6e3;
+  --ok: #1c7048;
+  --ok-bg: #e0f3e8;
+  --note: #fbe37f;
+  --note-ink: #3a2f00;
+  --note-line: #e6cb5c;
+  --shadow: 0 1px 2px rgba(20, 27, 51, .06), 0 4px 16px rgba(20, 27, 51, .06);
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1321; --surface: #161d30; --surface-2: #1b2338; --ink: #e6eaf4; --muted: #9aa4bd; --line: #2a3350;
+    --accent: #8796ff; --accent-soft: #232c52; --on-accent: #0e1321;
+    --warn: #f2b35a; --warn-bg: #3a2a12; --crit: #ff8f85; --crit-bg: #3e1b1b; --ok: #72d3a2; --ok-bg: #143020;
+    --note: #4d4213; --note-ink: #fbeaa8; --note-line: #6b5c1c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1321; --surface: #161d30; --surface-2: #1b2338; --ink: #e6eaf4; --muted: #9aa4bd; --line: #2a3350;
+  --accent: #8796ff; --accent-soft: #232c52; --on-accent: #0e1321;
+  --warn: #f2b35a; --warn-bg: #3a2a12; --crit: #ff8f85; --crit-bg: #3e1b1b; --ok: #72d3a2; --ok-bg: #143020;
+  --note: #4d4213; --note-ink: #fbeaa8; --note-line: #6b5c1c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 0 48px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Cabeçalho */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-block: 28px 18px; }
+.brand { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.brand .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.brand h1 { font-size: clamp(26px, 4vw, 34px); font-weight: 700; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat { display: flex; flex-direction: column; gap: 2px; padding: 8px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); min-width: 120px; text-align: left; }
+.stat b { font-family: var(--f-mono); font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); }
+button.stat { cursor: pointer; }
+button.stat.alert { border-color: var(--warn); background: var(--warn-bg); }
+button.stat.alert b, button.stat.alert span { color: var(--warn); }
+
+/* Abas */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.tab { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; font-weight: 500; color: var(--muted); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.tab .count { font-family: var(--f-mono); font-size: 12px; background: var(--warn-bg); color: var(--warn); border-radius: 99px; padding: 0 7px; }
+section.panel { padding-block: 20px 0; display: flex; flex-direction: column; gap: 16px; }
+
+/* Controles */
+.btn { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 8px 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { color: var(--crit); border-color: var(--crit); background: var(--surface); }
+.btn.danger.solid { background: var(--crit); color: var(--surface); }
+.btn.small { padding: 5px 10px; font-size: 13px; }
+.btn[disabled] { opacity: .55; cursor: progress; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field input, .field select, .field textarea, .toolbar input, .toolbar select {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0;
+}
+.field textarea { resize: vertical; min-height: 64px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar .grow { flex: 1 1 220px; min-width: 0; }
+.toolbar select { width: auto; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); cursor: pointer; }
+.spacer { flex: 1 1 auto; }
+
+/* Tabela de estoque */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+th.r, td.r { text-align: right; }
+tbody tr.clickable { cursor: pointer; }
+tbody tr.clickable:hover td { background: var(--surface-2); }
+.item-name { font-weight: 600; }
+.item-sub { font-size: 13px; color: var(--muted); }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.crit { background: var(--crit-bg); color: var(--crit); }
+.pill.in { background: var(--ok-bg); color: var(--ok); }
+.pill.out { background: var(--accent-soft); color: var(--accent); }
+.pill.adj { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.gauge { height: 4px; border-radius: 4px; background: var(--surface-2); margin-top: 6px; overflow: hidden; max-width: 120px; margin-left: auto; }
+.gauge i { display: block; height: 100%; background: var(--ok); }
+.gauge i.warn { background: var(--warn); }
+.gauge i.crit { background: var(--crit); }
+
+th.sel, td.sel { width: 1%; padding-right: 0; }
+td.sel { cursor: default; }
+.sel-box { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; vertical-align: middle; margin: 0; }
+.bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; background: var(--accent-soft); border-bottom: 1px solid var(--line); border-radius: var(--r) var(--r) 0 0; }
+.bulk .bulk-count { font-weight: 600; color: var(--accent); margin-right: auto; }
+.bulk.confirm-mode { background: var(--crit-bg); color: var(--crit); }
+.bulk p { margin: 0; flex: 1 1 260px; }
+.empty { padding: 36px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.empty h2 { font-size: 22px; }
+.empty p { max-width: 52ch; margin: 0; color: var(--muted); }
+.empty .row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.banner { padding: 12px 16px; border-radius: var(--r); background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn); }
+.banner.info { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.consulta .so-edicao { display: none !important; }
+.por { white-space: nowrap; }
+
+/* Movimentar */
+.mov-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px); gap: 16px; align-items: start; }
+.mov-form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; padding: 3px; background: var(--surface-2); align-self: flex-start; }
+.seg label { padding: 6px 16px; border-radius: 7px; cursor: pointer; font-weight: 600; color: var(--muted); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg input:checked + span { color: var(--on-accent); }
+.seg label:has(input:checked) { background: var(--accent); color: var(--on-accent); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.saldo-info { font-size: 14px; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px dashed var(--line); }
+.form-error { color: var(--crit); font-size: 14px; margin: 0; }
+.aside { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.aside h3 { font-size: 16px; }
+.mini-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.mini-list li { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.mini-list li span:first-child { min-width: 0; overflow-wrap: anywhere; }
+
+/* Histórico */
+.hist-row td { font-size: 14px; }
+.hist-detail { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.qty-in { color: var(--ok); }
+.qty-out { color: var(--accent); }
+
+/* Relatórios */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.tile { padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.tile b { font-family: var(--f-mono); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.tile span { font-size: 13px; color: var(--muted); }
+.rel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+.rel-card { padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.rel-card h3 { font-size: 17px; }
+.bars { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; font-size: 14px; }
+.bar-row .track { grid-column: 1 / -1; height: 8px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.bar-row .track i { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
+
+/* Lista de compras: post-it */
+.note { background: var(--note); color: var(--note-ink); border-radius: 4px 4px 18px 4px; padding: 22px 22px 18px; box-shadow: var(--shadow); max-width: 640px; transform: rotate(-.4deg); }
+.note h2 { font-size: 22px; margin-bottom: 4px; }
+.note .note-sub { font-size: 13px; opacity: .8; margin: 0 0 12px; }
+.note ul { list-style: none; margin: 0; padding: 0; }
+.note li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 9px 0; border-bottom: 1px solid var(--note-line); }
+.note li:last-child { border-bottom: 0; }
+.note li small { grid-column: 1 / -1; opacity: .8; }
+.note .qty { font-family: var(--f-mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+.note-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+@media (prefers-reduced-motion: reduce) { .note { transform: none; } }
+
+/* Diálogo */
+dialog { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+dialog::backdrop { background: rgba(10, 14, 28, .45); }
+.dlg-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 18px 20px 0; }
+.dlg-head h2 { font-size: 22px; overflow-wrap: anywhere; }
+.dlg-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+.x { appearance: none; border: 0; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); padding: 4px 8px; border-radius: 6px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.fact { padding: 10px 12px; border-radius: 8px; background: var(--surface-2); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fact span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.fact b { font-weight: 500; overflow-wrap: anywhere; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.count-box { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; padding: 12px; border: 1px dashed var(--line); border-radius: 8px; }
+.count-box .field { flex: 1 1 160px; }
+.confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: var(--crit-bg); color: var(--crit); }
+.confirm p { margin: 0; flex: 1 1 200px; }
+.dlg-section-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 0; }
+
+/* Aviso flutuante */
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100vw - 32px); z-index: 10; }
+.toast.erro { background: var(--crit); color: var(--surface); }
+
+@media (max-width: 760px) {
+  .mov-grid { grid-template-columns: minmax(0, 1fr); }
+  .hide-sm { display: none; }
+  td, th { padding: 10px; }
+  .stat { min-width: 0; flex: 1 1 30%; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="eyebrow">Controle de material de escritório</span>
+      <h1>Almoxarifado do Escritório</h1>
+    </div>
+    <div class="stats" id="stats">
+      <div class="stat"><b id="st-itens">–</b><span>itens cadastrados</span></div>
+      <button class="stat" id="st-alerta-btn" type="button"><b id="st-alerta">–</b><span>abaixo do mínimo</span></button>
+      <div class="stat"><b id="st-valor">–</b><span>valor em estoque</span></div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Seções">
+    <button class="tab" role="tab" id="t-estoque" data-tab="estoque" aria-selected="true">Estoque</button>
+    <button class="tab so-edicao" role="tab" id="t-movimentar" data-tab="movimentar" aria-selected="false">Entrada e saída</button>
+    <button class="tab" role="tab" id="t-historico" data-tab="historico" aria-selected="false">Histórico</button>
+    <button class="tab" role="tab" id="t-relatorios" data-tab="relatorios" aria-selected="false">Relatórios</button>
+    <button class="tab" role="tab" id="t-compras" data-tab="compras" aria-selected="false">Lista de compras <span class="count" id="tab-count" hidden></span></button>
+  </nav>
+
+  <div id="banner" class="banner" hidden style="margin-top:16px"></div>
+  <div id="consulta-banner" class="banner info" hidden style="margin-top:16px">Modo consulta: você pode ver o estoque, o histórico, os relatórios e a lista de compras. Para registrar entradas e saídas, peça acesso de edição ao responsável pelo almoxarifado.</div>
+
+  <!-- Estoque -->
+  <section class="panel" id="p-estoque" role="tabpanel" aria-labelledby="t-estoque">
+    <div class="toolbar">
+      <input class="grow" id="f-busca" type="search" placeholder="Buscar item, categoria ou local" aria-label="Buscar item">
+      <select id="f-cat" aria-label="Filtrar por categoria"><option value="">Todas as categorias</option></select>
+      <label class="check"><input type="checkbox" id="f-alerta"> Só abaixo do mínimo</label>
+      <span class="spacer"></span>
+      <button class="btn primary so-edicao" id="btn-novo" type="button">+ Novo item</button>
+    </div>
+    <div class="card" id="estoque-card">
+      <div class="empty"><h2>Carregando estoque…</h2><p>Os itens aparecem aqui assim que o banco desta página responder.</p></div>
+    </div>
+  </section>
+
+  <!-- Movimentar -->
+  <section class="panel" id="p-movimentar" role="tabpanel" aria-labelledby="t-movimentar" hidden>
+    <div class="mov-grid">
+      <form class="card mov-form" id="mov-form" novalidate>
+        <div class="seg" role="radiogroup" aria-label="Tipo de movimentação">
+          <label><input type="radio" name="tipo" value="entrada" id="tipo-entrada" checked><span>Entrada</span></label>
+          <label><input type="radio" name="tipo" value="saida" id="tipo-saida"><span>Saída</span></label>
+        </div>
+        <div class="fields">
+          <div class="field" style="grid-column: 1 / -1">
+            <label for="m-item">Item</label>
+            <select id="m-item" required><option value="">Escolha um item</option></select>
+          </div>
+          <div class="field">
+            <label for="m-qtd">Quantidade</label>
+            <input id="m-qtd" type="number" min="0" step="any" inputmode="decimal" required>
+          </div>
+          <div class="field">
+            <label for="m-data">Data</label>
+            <input id="m-data" type="date" required>
+          </div>
+          <div class="field only-in">
+            <label for="m-custo">Custo unitário (R$)</label>
+            <input id="m-custo" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00">
+          </div>
+          <div class="field only-in">
+            <label for="m-fornecedor">Fornecedor</label>
+            <input id="m-fornecedor" list="dl-fornecedores" autocomplete="off">
+          </div>
+          <div class="field only-in">
+            <label for="m-nf">Nº da nota fiscal</label>
+            <input id="m-nf" autocomplete="off">
+          </div>
+          <div class="field only-out" hidden>
+            <label for="m-setor">Setor</label>
+            <input id="m-setor" list="dl-setores" autocomplete="off" placeholder="Ex.: Recepção">
+          </div>
+          <div class="field only-out" hidden>
+            <label for="m-pessoa">Retirado por</label>
+            <input id="m-pessoa" list="dl-pessoas" autocomplete="off">
+          </div>
+          <div class="field" style="grid-column: 1 / -1">
+            <label for="m-obs">Observação</label>
+            <input id="m-obs" autocomplete="off">
+          </div>
+        </div>
+        <div class="saldo-info" id="m-saldo">Escolha um item para ver o saldo.</div>
+        <p class="form-error" id="m-erro" hidden></p>
+        <div class="row-actions">
+          <button class="btn primary" type="submit" id="m-enviar">Registrar entrada</button>
+        </div>
+      </form>
+      <aside class="card aside">
+        <h3>Últimos registros</h3>
+        <ul class="mini-list" id="mov-recentes"><li class="muted">Nenhum registro ainda.</li></ul>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Histórico -->
+  <section class="panel" id="p-historico" role="tabpanel" aria-labelledby="t-historico" hidden>
+    <div class="toolbar">
+      <input class="grow" id="h-busca" type="search" placeholder="Buscar item, setor, pessoa ou fornecedor" aria-label="Buscar no histórico">
+      <select id="h-tipo" aria-label="Filtrar por tipo">
+        <option value="">Todos os tipos</option>
+        <option value="entrada">Entradas</option>
+        <option value="saida">Saídas</option>
+        <option value="ajuste">Ajustes de contagem</option>
+      </select>
+    </div>
+    <div class="card table-wrap" id="hist-card"></div>
+    <p class="muted" style="margin:0;font-size:13px">Mostra os 300 registros mais recentes. Para períodos mais longos, use Relatórios.</p>
+  </section>
+
+  <!-- Relatórios -->
+  <section class="panel" id="p-relatorios" role="tabpanel" aria-labelledby="t-relatorios" hidden>
+    <div class="toolbar">
+      <label for="r-periodo" class="muted" style="font-size:14px;font-weight:600">Período</label>
+      <select id="r-periodo">
+        <option value="mes">Este mês</option>
+        <option value="mes-ant">Mês passado</option>
+        <option value="90">Últimos 90 dias</option>
+        <option value="ano">Este ano</option>
+      </select>
+    </div>
+    <div id="rel-body"></div>
+  </section>
+
+  <!-- Compras -->
+  <section class="panel" id="p-compras" role="tabpanel" aria-labelledby="t-compras" hidden>
+    <div id="compras-body"></div>
+  </section>
+</div>
+
+<datalist id="dl-categorias"></datalist>
+<datalist id="dl-locais"></datalist>
+<datalist id="dl-setores"></datalist>
+<datalist id="dl-pessoas"></datalist>
+<datalist id="dl-fornecedores"></datalist>
+<datalist id="dl-unidades">
+  <option value="un"></option><option value="cx"></option><option value="pct"></option><option value="resma"></option>
+  <option value="rolo"></option><option value="bloco"></option><option value="fardo"></option><option value="kg"></option><option value="L"></option>
+</datalist>
+
+<dialog id="dlg" aria-labelledby="dlg-title"></dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const CATALOGO = [
+    ["Papel A4 75 g/m²", "Papelaria", "resma", 5, "Armário 1"],
+    ["Caneta esferográfica azul", "Escrita", "un", 20, "Armário 1"],
+    ["Caneta esferográfica preta", "Escrita", "un", 10, "Armário 1"],
+    ["Lápis HB", "Escrita", "un", 10, "Armário 1"],
+    ["Marca-texto amarelo", "Escrita", "un", 5, "Armário 1"],
+    ["Clipes nº 2/0", "Papelaria", "cx", 3, "Armário 1"],
+    ["Grampos 26/6", "Papelaria", "cx", 3, "Armário 1"],
+    ["Bloco adesivo 76 × 76 mm", "Papelaria", "bloco", 10, "Armário 1"],
+    ["Envelope ofício branco", "Papelaria", "pct", 2, "Armário 2"],
+    ["Pasta suspensa", "Arquivo", "un", 20, "Armário 2"],
+    ["Fita adesiva transparente 12 mm", "Papelaria", "rolo", 5, "Armário 1"],
+    ["Toner da impressora", "Impressão", "un", 1, "Armário 2"],
+    ["Pilha AA", "Diversos", "un", 8, "Armário 2"],
+    ["Copo descartável 200 ml", "Copa", "pct", 5, "Copa"],
+    ["Café 500 g", "Copa", "pct", 3, "Copa"],
+    ["Papel toalha interfolha", "Limpeza", "fardo", 2, "Depósito"],
+  ];
+
+  const state = { db: null, dbStatus: "loading", itens: [], itensLoaded: false, movs: [], tab: "estoque", relSeq: 0, sel: new Set(), confirmarMassa: false, user: null, uid: null, podeEscrever: null };
+
+  // ---------- utilidades ----------
+  const $ = (s, el = document) => el.querySelector(s);
+  function h(tag, props, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k === "text") el.textContent = v;
+      else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of kids.flat()) {
+      if (c == null || c === false) continue;
+      el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    }
+    return el;
+  }
+  const nfQtd = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 });
+  const nfBRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const fmtQtd = (n) => nfQtd.format(n || 0);
+  const fmtBRL = (n) => nfBRL.format(n || 0);
+  const fmtData = (iso) => { const d = new Date(iso); return isNaN(d) ? "—" : d.toLocaleDateString("pt-BR"); };
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const round = (n, d = 3) => Math.round((Number(n) || 0) * 10 ** d) / 10 ** d;
+  const hojeISO = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+  const porNome = (a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR");
+
+  function situacao(it) {
+    const saldo = it.saldo || 0, min = it.minimo || 0;
+    if (saldo <= 0) return { cls: "crit", txt: "Sem estoque", ordem: 0 };
+    if (min > 0 && saldo < min) return { cls: "warn", txt: "Abaixo do mínimo", ordem: 1 };
+    return { cls: "ok", txt: "OK", ordem: 2 };
+  }
+  const precisaComprar = (it) => (it.minimo || 0) > 0 && (it.saldo || 0) < it.minimo;
+  const sugestao = (it) => Math.max(Math.ceil((it.minimo || 0) * 2 - Math.max(it.saldo || 0, 0)), 1);
+
+  let toastTimer;
+  function toast(msg, tipo) {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.className = "toast" + (tipo === "erro" ? " erro" : "");
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 3800);
+  }
+  function erroDb(e) {
+    const code = e && e.code;
+    if (code === "quota_exceeded") return "O banco desta página está cheio. Exclua itens antigos para continuar.";
+    if (code === "invalid_argument") return "Não foi possível salvar: você não tem permissão para alterar este estoque.";
+    if (code === "resource_exhausted") return "Muitas operações seguidas. Aguarde alguns segundos e tente de novo.";
+    return "Não foi possível salvar agora. Verifique a conexão e tente de novo.";
+  }
+  async function comBusy(btn, fn) {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    try { await fn(); } catch (e) {
+      toast(erroDb(e), "erro");
+      if (e && e.code === "invalid_argument" && state.podeEscrever !== true) ativarConsulta();
+    } finally { btn.disabled = false; }
+  }
+  function ativarConsulta() {
+    document.body.classList.add("consulta");
+    $("#consulta-banner").hidden = false;
+    state.sel.clear();
+    if (state.tab === "movimentar") irPara("estoque");
+  }
+  // quem registrou cada movimentação: guarda só o id e resolve o nome na hora de mostrar
+  const porSpan = (m) => (m.por ? h("span", { class: "por", "data-uid": m.por }, "por …") : null);
+  async function resolverNomes(root) {
+    const els = [...root.querySelectorAll("[data-uid]")];
+    if (!els.length) return;
+    if (!state.user) { els.forEach((el) => { el.textContent = ""; }); return; }
+    const ps = await state.user.profiles([...new Set(els.map((el) => el.dataset.uid))]);
+    for (const el of els) {
+      const p = ps[el.dataset.uid];
+      el.textContent = "por " + ((p && (p.isMe ? "você" : p.name)) || "alguém");
+    }
+  }
+  function limpo(obj) {
+    const o = {};
+    for (const [k, v] of Object.entries(obj)) if (v !== undefined) o[k] = v;
+    return o;
+  }
+
+  // ---------- banco ----------
+  async function registrar(tipo, item, qtd, extra = {}, dataISO) {
+    const db = state.db;
+    const saldo = item.saldo || 0, custo = item.custoMedio || 0;
+    let novoSaldo, novoCusto = custo, custoUnit = custo;
+    if (tipo === "entrada") {
+      custoUnit = extra.custoUnit > 0 ? extra.custoUnit : custo;
+      novoSaldo = saldo + qtd;
+      const base = Math.max(saldo, 0);
+      if (extra.custoUnit > 0) novoCusto = (base * custo + qtd * extra.custoUnit) / (base + qtd);
+    } else if (tipo === "saida") {
+      novoSaldo = saldo - qtd;
+    } else {
+      novoSaldo = saldo + qtd; // ajuste: qtd é a diferença da contagem
+    }
+    const agora = new Date();
+    let quando = agora.toISOString();
+    if (dataISO) {
+      const d = new Date(dataISO + "T" + agora.toTimeString().slice(0, 8));
+      if (!isNaN(d)) quando = d.toISOString();
+    }
+    const mov = limpo({
+      itemId: item.id, itemNome: item.nome, unidade: item.unidade || "un", tipo,
+      qtd: round(qtd), custoUnit: round(custoUnit, 4), valor: round(Math.abs(qtd) * custoUnit, 2),
+      quando, registradoEm: agora.toISOString(), saldoApos: round(novoSaldo), por: state.uid || undefined,
+      setor: extra.setor || undefined, pessoa: extra.pessoa || undefined,
+      fornecedor: extra.fornecedor || undefined, nf: extra.nf || undefined, obs: extra.obs || undefined,
+    });
+    await db.collection("movs").add(mov);
+    await db.doc("itens/" + item.id).update({ saldo: round(novoSaldo), custoMedio: round(novoCusto, 4), atualizadoEm: agora.toISOString() });
+  }
+
+  async function conectar() {
+    const temClaude = window.claude && typeof window.claude.use === "function";
+    if (temClaude) {
+      window.claude.use("user").then(async (u) => {
+        if (!u) return;
+        state.user = u;
+        state.uid = await u.id();
+        state.podeEscrever = await u.can("data.write");
+        if (state.podeEscrever === false) ativarConsulta();
+        renderHistorico();
+        renderRecentes();
+      }).catch(() => {});
+    }
+    const use = temClaude ? window.claude.use("db") : Promise.resolve(null);
+    let db = null;
+    try { db = await use; } catch (e) { db = null; }
+    if (!db) {
+      state.dbStatus = "off";
+      const b = $("#banner");
+      b.textContent = "O banco de dados desta página não está disponível. Abra o link no claude.ai com sua conta conectada para ver e registrar o estoque.";
+      b.hidden = false;
+      renderTudo();
+      return;
+    }
+    state.db = db;
+    state.dbStatus = "ok";
+    const falhou = () => {
+      const b = $("#banner");
+      b.textContent = "A conexão com o banco foi interrompida. Recarregue a página para continuar.";
+      b.hidden = false;
+    };
+    db.collection("itens").onSnapshot((snap) => {
+      state.itens = snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+      state.itensLoaded = true;
+      renderTudo();
+    }, falhou);
+    db.collection("movs").orderBy("quando", "desc").limit(300).onSnapshot((snap) => {
+      state.movs = snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+      renderHistorico();
+      renderRecentes();
+      preencherListas();
+    }, falhou);
+  }
+
+  // ---------- abas ----------
+  const TABS = ["estoque", "movimentar", "historico", "relatorios", "compras"];
+  function irPara(tab) {
+    if (!TABS.includes(tab)) tab = "estoque";
+    state.tab = tab;
+    for (const t of TABS) {
+      $("#p-" + t).hidden = t !== tab;
+      $("#t-" + t).setAttribute("aria-selected", String(t === tab));
+    }
+    if (tab === "relatorios") renderRelatorios();
+  }
+  document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.tab)));
+  $("#st-alerta-btn").addEventListener("click", () => irPara("compras"));
+
+  // ---------- render: resumo ----------
+  function renderResumo() {
+    const ok = state.dbStatus === "ok" && state.itensLoaded;
+    const alerta = state.itens.filter(precisaComprar).length;
+    const valor = state.itens.reduce((s, i) => s + Math.max(i.saldo || 0, 0) * (i.custoMedio || 0), 0);
+    $("#st-itens").textContent = ok ? state.itens.length : "–";
+    $("#st-alerta").textContent = ok ? alerta : "–";
+    $("#st-valor").textContent = ok ? fmtBRL(valor) : "–";
+    $("#st-alerta-btn").classList.toggle("alert", ok && alerta > 0);
+    const n = state.itens.filter(precisaComprar).length;
+    const c = $("#tab-count");
+    c.hidden = !(ok && n > 0);
+    c.textContent = n;
+  }
+
+  // ---------- render: estoque ----------
+  function renderEstoque() {
+    const card = $("#estoque-card");
+    card.replaceChildren();
+    if (state.dbStatus === "off") {
+      card.append(h("div", { class: "empty" }, h("h2", { text: "Estoque indisponível" }), h("p", { text: "Esta página guarda os dados no banco do claude.ai. Abra pelo link com sua conta para usar." })));
+      return;
+    }
+    if (!state.itensLoaded) {
+      card.append(h("div", { class: "empty" }, h("h2", { text: "Carregando estoque…" }), h("p", { text: "Os itens aparecem aqui assim que o banco desta página responder." })));
+      return;
+    }
+    if (!state.itens.length) {
+      const btnCat = h("button", { class: "btn", type: "button" }, "Começar com catálogo básico");
+      btnCat.addEventListener("click", () => comBusy(btnCat, carregarCatalogo));
+      card.append(h("div", { class: "empty" },
+        h("h2", { text: "Nenhum item cadastrado ainda" }),
+        h("p", { text: "Cadastre o que fica no almoxarifado: papel, canetas, toner, itens de copa. Depois registre as entradas (compras) e as saídas (retiradas por setor) para o saldo se atualizar sozinho." }),
+        h("p", { class: "so-edicao", text: "O catálogo básico cria 16 itens comuns de escritório com saldo zero e estoque mínimo sugerido. Você pode editar ou excluir qualquer um depois." }),
+        h("div", { class: "row so-edicao" },
+          h("button", { class: "btn primary", type: "button", onclick: () => abrirFormItem() }, "Cadastrar primeiro item"),
+          btnCat)));
+      return;
+    }
+    const busca = norm($("#f-busca").value);
+    const cat = $("#f-cat").value;
+    const soAlerta = $("#f-alerta").checked;
+    const lista = state.itens.filter((it) => {
+      if (cat && it.categoria !== cat) return false;
+      if (soAlerta && situacao(it).ordem === 2) return false;
+      if (busca && !norm([it.nome, it.categoria, it.local].join(" ")).includes(busca)) return false;
+      return true;
+    }).sort(porNome);
+
+    // seleção para exclusão em massa
+    for (const id of [...state.sel]) if (!state.itens.some((i) => i.id === id)) state.sel.delete(id);
+    const visiveis = lista.map((i) => i.id);
+    const chkTodos = h("input", { type: "checkbox", class: "sel-box", "aria-label": "Selecionar todos os itens visíveis" });
+    const chkLinhas = [];
+    const barra = h("div", { class: "bulk so-edicao", hidden: true });
+    function atualizarMassa() {
+      const n = state.sel.size;
+      const marcadosVis = visiveis.filter((id) => state.sel.has(id)).length;
+      chkTodos.checked = visiveis.length > 0 && marcadosVis === visiveis.length;
+      chkTodos.indeterminate = marcadosVis > 0 && marcadosVis < visiveis.length;
+      chkLinhas.forEach(([id, c]) => { c.checked = state.sel.has(id); });
+      barra.hidden = n === 0;
+      barra.classList.toggle("confirm-mode", !!state.confirmarMassa);
+      if (!n) { state.confirmarMassa = false; return; }
+      const rotulo = n === 1 ? "1 item" : n + " itens";
+      if (!state.confirmarMassa) {
+        barra.replaceChildren(
+          h("span", { class: "bulk-count", text: rotulo + (n === 1 ? " selecionado" : " selecionados") }),
+          h("button", { class: "btn danger small", type: "button", onclick: () => { state.confirmarMassa = true; atualizarMassa(); } }, "Excluir selecionados"),
+          h("button", { class: "btn small", type: "button", onclick: () => { state.sel.clear(); atualizarMassa(); } }, "Limpar seleção"));
+      } else {
+        const btnSim = h("button", { class: "btn danger solid small", type: "button" }, "Excluir " + rotulo);
+        btnSim.addEventListener("click", () => comBusy(btnSim, async () => {
+          let feitos = 0;
+          for (const id of [...state.sel]) {
+            await state.db.doc("itens/" + id).delete();
+            state.sel.delete(id);
+            feitos++;
+          }
+          state.confirmarMassa = false;
+          toast((feitos === 1 ? "1 item excluído" : feitos + " itens excluídos") + ". O histórico de movimentações foi mantido.");
+          renderEstoque();
+        }));
+        barra.replaceChildren(
+          h("p", { text: "Excluir " + rotulo + "? Essa ação não pode ser desfeita; o histórico de movimentações continua disponível." }),
+          h("button", { class: "btn small", type: "button", onclick: () => { state.confirmarMassa = false; atualizarMassa(); } }, "Cancelar"),
+          btnSim);
+      }
+    }
+    chkTodos.addEventListener("change", () => {
+      visiveis.forEach((id) => (chkTodos.checked ? state.sel.add(id) : state.sel.delete(id)));
+      state.confirmarMassa = false;
+      atualizarMassa();
+    });
+
+    const wrap = h("div", { class: "table-wrap" });
+    const tbody = h("tbody");
+    for (const it of lista) {
+      const s = situacao(it);
+      const pct = it.minimo > 0 ? Math.min(100, Math.max(0, (it.saldo || 0) / (it.minimo * 2) * 100)) : ((it.saldo || 0) > 0 ? 100 : 0);
+      const chk = h("input", { type: "checkbox", class: "sel-box", "aria-label": "Selecionar " + it.nome });
+      chk.addEventListener("change", () => {
+        if (chk.checked) state.sel.add(it.id); else state.sel.delete(it.id);
+        state.confirmarMassa = false;
+        atualizarMassa();
+      });
+      chkLinhas.push([it.id, chk]);
+      const tdSel = h("td", { class: "sel so-edicao" }, chk);
+      tdSel.addEventListener("click", (e) => { e.stopPropagation(); if (e.target === tdSel) chk.click(); });
+      const tr = h("tr", { class: "clickable", tabindex: "0" },
+        tdSel,
+        h("td", null, h("div", { class: "item-name", text: it.nome }), h("div", { class: "item-sub", text: [it.categoria, it.local].filter(Boolean).join(" · ") })),
+        h("td", { class: "hide-sm", text: it.local || "—" }),
+        h("td", { class: "r" }, h("span", { class: "num", text: fmtQtd(it.saldo) + " " + (it.unidade || "un") }), h("div", { class: "gauge" }, h("i", { class: s.cls === "ok" ? "" : s.cls, style: "width:" + pct + "%" }))),
+        h("td", { class: "r num hide-sm", text: it.minimo > 0 ? fmtQtd(it.minimo) : "—" }),
+        h("td", null, h("span", { class: "pill " + s.cls, text: s.txt })),
+        h("td", { class: "r num hide-sm", text: fmtBRL(Math.max(it.saldo || 0, 0) * (it.custoMedio || 0)) }));
+      tr.addEventListener("click", () => abrirDetalhe(it.id));
+      tr.addEventListener("keydown", (e) => { if (e.target === tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); abrirDetalhe(it.id); } });
+      tbody.append(tr);
+    }
+    if (!lista.length) tbody.append(h("tr", null, h("td", { colspan: "7", class: "muted", text: "Nenhum item corresponde ao filtro." })));
+    wrap.append(h("table", null,
+      h("thead", null, h("tr", null, h("th", { class: "sel so-edicao" }, chkTodos), h("th", { text: "Item" }), h("th", { class: "hide-sm", text: "Local" }), h("th", { class: "r", text: "Saldo" }), h("th", { class: "r hide-sm", text: "Mínimo" }), h("th", { text: "Situação" }), h("th", { class: "r hide-sm", text: "Valor" }))),
+      tbody));
+    card.append(barra, wrap);
+    atualizarMassa();
+  }
+  ["#f-busca", "#f-cat", "#f-alerta"].forEach((s) => $(s).addEventListener("input", renderEstoque));
+  $("#btn-novo").addEventListener("click", () => abrirFormItem());
+
+  async function carregarCatalogo() {
+    const col = state.db.collection("itens");
+    const agora = new Date().toISOString();
+    for (const [nome, categoria, unidade, minimo, local] of CATALOGO) {
+      await col.add({ nome, categoria, unidade, minimo, local, saldo: 0, custoMedio: 0, criadoEm: agora });
+    }
+    toast("Catálogo básico criado. Registre as entradas para lançar o saldo atual.");
+  }
+
+  // ---------- listas de sugestão ----------
+  function preencherDatalist(id, valores) {
+    const dl = $(id);
+    dl.replaceChildren(...[...new Set(valores.filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR")).map((v) => h("option", { value: v })));
+  }
+  function preencherListas() {
+    preencherDatalist("#dl-categorias", state.itens.map((i) => i.categoria).concat(["Papelaria", "Escrita", "Arquivo", "Impressão", "Copa", "Limpeza", "Diversos"]));
+    preencherDatalist("#dl-locais", state.itens.map((i) => i.local));
+    preencherDatalist("#dl-setores", state.movs.map((m) => m.setor));
+    preencherDatalist("#dl-pessoas", state.movs.map((m) => m.pessoa));
+    preencherDatalist("#dl-fornecedores", state.movs.map((m) => m.fornecedor));
+    const sel = $("#f-cat"), atual = sel.value;
+    const cats = [...new Set(state.itens.map((i) => i.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    sel.replaceChildren(h("option", { value: "" }, "Todas as categorias"), ...cats.map((c) => h("option", { value: c }, c)));
+    sel.value = cats.includes(atual) ? atual : "";
+  }
+
+  // ---------- movimentar ----------
+  const tipoAtual = () => ($("#tipo-saida").checked ? "saida" : "entrada");
+  function itemPorId(id) { return state.itens.find((i) => i.id === id); }
+  function preencherSelectItens() {
+    const sel = $("#m-item"), atual = sel.value;
+    const itens = state.itens.slice().sort(porNome);
+    sel.replaceChildren(h("option", { value: "" }, itens.length ? "Escolha um item" : "Cadastre itens na aba Estoque"),
+      ...itens.map((i) => h("option", { value: i.id }, i.nome + " (" + (i.unidade || "un") + ")")));
+    sel.value = itens.some((i) => i.id === atual) ? atual : "";
+  }
+  function atualizarFormMov() {
+    const tipo = tipoAtual();
+    document.querySelectorAll(".only-in").forEach((el) => { el.hidden = tipo !== "entrada"; });
+    document.querySelectorAll(".only-out").forEach((el) => { el.hidden = tipo !== "saida"; });
+    $("#m-enviar").textContent = tipo === "entrada" ? "Registrar entrada" : "Registrar saída";
+    const it = itemPorId($("#m-item").value);
+    const info = $("#m-saldo");
+    if (!it) { info.textContent = "Escolha um item para ver o saldo."; return; }
+    const q = parseFloat($("#m-qtd").value) || 0;
+    const un = it.unidade || "un";
+    const depois = tipo === "entrada" ? (it.saldo || 0) + q : (it.saldo || 0) - q;
+    info.replaceChildren(
+      "Saldo atual: ", h("b", { class: "num", text: fmtQtd(it.saldo) + " " + un }),
+      q > 0 ? [" · depois deste registro: ", h("b", { class: "num", text: fmtQtd(depois) + " " + un })] : null,
+      it.custoMedio > 0 ? [" · custo médio ", h("span", { class: "num", text: fmtBRL(it.custoMedio) })] : null);
+  }
+  document.querySelectorAll('input[name="tipo"]').forEach((r) => r.addEventListener("change", () => { $("#m-erro").hidden = true; atualizarFormMov(); }));
+  ["#m-item", "#m-qtd"].forEach((s) => $(s).addEventListener("input", atualizarFormMov));
+  $("#m-data").value = hojeISO();
+
+  $("#mov-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const erro = $("#m-erro");
+    erro.hidden = true;
+    const falha = (msg) => { erro.textContent = msg; erro.hidden = false; };
+    if (state.dbStatus !== "ok") return falha("O banco desta página não está disponível.");
+    const it = itemPorId($("#m-item").value);
+    const qtd = parseFloat($("#m-qtd").value);
+    const tipo = tipoAtual();
+    if (!it) return falha("Escolha o item.");
+    if (!(qtd > 0)) return falha("Informe uma quantidade maior que zero.");
+    if (tipo === "saida" && qtd > (it.saldo || 0)) {
+      return falha("Saldo insuficiente: há " + fmtQtd(it.saldo) + " " + (it.unidade || "un") + ". Se o saldo estiver errado, faça uma contagem física no item.");
+    }
+    const extra = tipo === "entrada"
+      ? { custoUnit: parseFloat($("#m-custo").value) || 0, fornecedor: $("#m-fornecedor").value.trim(), nf: $("#m-nf").value.trim(), obs: $("#m-obs").value.trim() }
+      : { setor: $("#m-setor").value.trim(), pessoa: $("#m-pessoa").value.trim(), obs: $("#m-obs").value.trim() };
+    comBusy($("#m-enviar"), async () => {
+      await registrar(tipo, it, qtd, extra, $("#m-data").value);
+      toast((tipo === "entrada" ? "Entrada" : "Saída") + " registrada: " + fmtQtd(qtd) + " " + (it.unidade || "un") + " de " + it.nome + ".");
+      ["#m-qtd", "#m-custo", "#m-nf", "#m-obs"].forEach((s) => { $(s).value = ""; });
+      atualizarFormMov();
+    });
+  });
+
+  function abrirMovimento(itemId, tipo) {
+    fecharDialogo();
+    irPara("movimentar");
+    $(tipo === "saida" ? "#tipo-saida" : "#tipo-entrada").checked = true;
+    $("#m-item").value = itemId;
+    $("#m-erro").hidden = true;
+    atualizarFormMov();
+    $("#m-qtd").focus();
+  }
+
+  function descreverMov(m) {
+    if (m.tipo === "entrada") return [m.fornecedor, m.nf ? "NF " + m.nf : "", m.obs].filter(Boolean).join(" · ");
+    if (m.tipo === "saida") return [m.setor, m.pessoa, m.obs].filter(Boolean).join(" · ");
+    return m.obs || "Ajuste por contagem física";
+  }
+  const ROTULO = { entrada: ["Entrada", "in"], saida: ["Saída", "out"], ajuste: ["Ajuste", "adj"] };
+  const sinal = (m) => (m.tipo === "saida" ? -1 : m.tipo === "ajuste" ? Math.sign(m.qtd) || 1 : 1);
+  function qtdAssinada(m) {
+    const q = m.tipo === "ajuste" ? m.qtd : (m.tipo === "saida" ? -m.qtd : m.qtd);
+    return (q > 0 ? "+" : q < 0 ? "−" : "") + fmtQtd(Math.abs(q)) + " " + (m.unidade || "un");
+  }
+
+  function renderRecentes() {
+    const ul = $("#mov-recentes");
+    const ult = state.movs.slice(0, 8);
+    if (!ult.length) { ul.replaceChildren(h("li", { class: "muted" }, "Nenhum registro ainda.")); return; }
+    ul.replaceChildren(...ult.map((m) => h("li", null,
+      h("span", null, m.itemNome, h("br"), h("small", { class: "muted", text: fmtData(m.quando) + (descreverMov(m) ? " · " + descreverMov(m) : "") })),
+      h("span", { class: "num " + (sinal(m) > 0 ? "qty-in" : "qty-out"), text: qtdAssinada(m) }))));
+  }
+
+  // ---------- histórico ----------
+  function renderHistorico() {
+    const card = $("#hist-card");
+    const busca = norm($("#h-busca").value);
+    const tipo = $("#h-tipo").value;
+    const lista = state.movs.filter((m) => (!tipo || m.tipo === tipo) && (!busca || norm([m.itemNome, m.setor, m.pessoa, m.fornecedor, m.nf, m.obs].join(" ")).includes(busca)));
+    if (!state.movs.length) {
+      card.replaceChildren(h("div", { class: "empty" }, h("h2", { text: "Sem movimentações" }), h("p", { text: "Cada entrada, saída e ajuste de contagem aparece aqui, com data, setor ou fornecedor e o saldo resultante." })));
+      return;
+    }
+    const tbody = h("tbody", null, lista.map((m) => {
+      const [rot, cls] = ROTULO[m.tipo] || ["—", "adj"];
+      return h("tr", { class: "hist-row" },
+        h("td", { class: "num", text: fmtData(m.quando) }),
+        h("td", null, h("span", { class: "pill " + cls, text: rot })),
+        h("td", null, h("div", { class: "item-name", text: m.itemNome }), h("div", { class: "hist-detail" }, descreverMov(m), m.por ? [descreverMov(m) ? " · " : "", porSpan(m)] : null)),
+        h("td", { class: "r num " + (sinal(m) > 0 ? "qty-in" : "qty-out"), text: qtdAssinada(m) }),
+        h("td", { class: "r num hide-sm", text: m.valor ? fmtBRL(m.valor) : "—" }),
+        h("td", { class: "r num hide-sm", text: fmtQtd(m.saldoApos) }));
+    }));
+    if (!lista.length) tbody.append(h("tr", null, h("td", { colspan: "6", class: "muted", text: "Nenhum registro corresponde ao filtro." })));
+    card.replaceChildren(h("table", null,
+      h("thead", null, h("tr", null, h("th", { text: "Data" }), h("th", { text: "Tipo" }), h("th", { text: "Item" }), h("th", { class: "r", text: "Qtd." }), h("th", { class: "r hide-sm", text: "Valor" }), h("th", { class: "r hide-sm", text: "Saldo após" }))),
+      tbody));
+    resolverNomes(card);
+  }
+  ["#h-busca", "#h-tipo"].forEach((s) => $(s).addEventListener("input", renderHistorico));
+
+  // ---------- relatórios ----------
+  function intervalo(p) {
+    const d = new Date();
+    const y = d.getFullYear(), m = d.getMonth();
+    if (p === "mes-ant") return [new Date(y, m - 1, 1), new Date(y, m, 1)];
+    if (p === "90") return [new Date(d.getTime() - 90 * 864e5), null];
+    if (p === "ano") return [new Date(y, 0, 1), null];
+    return [new Date(y, m, 1), null];
+  }
+  function barras(linhas, fmt) {
+    if (!linhas.length) return h("p", { class: "muted", text: "Sem retiradas no período." });
+    const max = Math.max(...linhas.map((l) => l.v)) || 1;
+    return h("div", { class: "bars" }, linhas.map((l) => h("div", { class: "bar-row" },
+      h("span", { text: l.k }), h("span", { class: "num", text: fmt(l) }),
+      h("div", { class: "track" }, h("i", { style: "width:" + Math.max(2, l.v / max * 100) + "%" })))));
+  }
+  async function renderRelatorios() {
+    const body = $("#rel-body");
+    if (state.dbStatus !== "ok") {
+      body.replaceChildren(h("div", { class: "card empty" }, h("h2", { text: "Relatórios indisponíveis" }), h("p", { text: "Abra a página pelo claude.ai para consultar o consumo." })));
+      return;
+    }
+    const seq = ++state.relSeq;
+    body.replaceChildren(h("p", { class: "muted", text: "Calculando…" }));
+    const [ini, fim] = intervalo($("#r-periodo").value);
+    let q = state.db.collection("movs").where("quando", ">=", ini.toISOString());
+    if (fim) q = q.where("quando", "<", fim.toISOString());
+    let movs;
+    try { movs = (await q.orderBy("quando", "desc").limit(1000).get()).docs.map((d) => d.data()); }
+    catch (e) { if (seq === state.relSeq) body.replaceChildren(h("p", { class: "form-error", text: "Não foi possível carregar o relatório. Tente de novo em instantes." })); return; }
+    if (seq !== state.relSeq) return;
+    const saidas = movs.filter((m) => m.tipo === "saida");
+    const entradas = movs.filter((m) => m.tipo === "entrada");
+    const consumo = saidas.reduce((s, m) => s + (m.valor || 0), 0);
+    const compras = entradas.reduce((s, m) => s + (m.valor || 0), 0);
+    const porSetor = new Map(), porItem = new Map();
+    for (const m of saidas) {
+      const k = m.setor || "Sem setor";
+      const a = porSetor.get(k) || { k, v: 0, n: 0 };
+      a.v += m.valor || 0; a.n += 1; porSetor.set(k, a);
+      const b = porItem.get(m.itemId) || { k: m.itemNome, un: m.unidade || "un", q: 0, v: 0 };
+      b.q += m.qtd || 0; b.v += m.valor || 0; porItem.set(m.itemId, b);
+    }
+    const setores = [...porSetor.values()].sort((a, b) => b.v - a.v || b.n - a.n);
+    const usaValor = setores.some((s) => s.v > 0);
+    const setoresBar = setores.map((s) => ({ k: s.k, v: usaValor ? s.v : s.n, n: s.n, val: s.v }));
+    const itens = [...porItem.values()].sort((a, b) => b.v - a.v || b.q - a.q).slice(0, 10);
+    body.replaceChildren(
+      h("div", { class: "tiles" },
+        h("div", { class: "card tile" }, h("b", { text: fmtBRL(consumo) }), h("span", { text: "consumo (saídas a custo médio)" })),
+        h("div", { class: "card tile" }, h("b", { text: String(saidas.length) }), h("span", { text: "retiradas registradas" })),
+        h("div", { class: "card tile" }, h("b", { text: fmtBRL(compras) }), h("span", { text: "compras (entradas)" }))),
+      h("div", { class: "rel-grid", style: "margin-top:16px" },
+        h("div", { class: "card rel-card" }, h("h3", { text: "Consumo por setor" }),
+          barras(setoresBar, (l) => (usaValor ? fmtBRL(l.val) + " · " : "") + l.n + (l.n === 1 ? " retirada" : " retiradas"))),
+        h("div", { class: "card rel-card" }, h("h3", { text: "Itens mais retirados" }),
+          itens.length ? h("div", { class: "table-wrap" }, h("table", null,
+            h("thead", null, h("tr", null, h("th", { text: "Item" }), h("th", { class: "r", text: "Qtd." }), h("th", { class: "r", text: "Valor" }))),
+            h("tbody", null, itens.map((i) => h("tr", null, h("td", { text: i.k }), h("td", { class: "r num", text: fmtQtd(i.q) + " " + i.un }), h("td", { class: "r num", text: fmtBRL(i.v) }))))))
+            : h("p", { class: "muted", text: "Sem retiradas no período." }))),
+      movs.length >= 1000 ? h("p", { class: "muted", style: "font-size:13px", text: "O período tem mais de 1.000 registros; o relatório considera os 1.000 mais recentes." }) : null);
+  }
+  $("#r-periodo").addEventListener("input", renderRelatorios);
+
+  // ---------- compras ----------
+  function textoLista(lista) {
+    return "Lista de compras — " + new Date().toLocaleDateString("pt-BR") + "\n" +
+      lista.map((i) => "- " + i.nome + ": " + fmtQtd(sugestao(i)) + " " + (i.unidade || "un") + " (saldo " + fmtQtd(i.saldo) + ", mínimo " + fmtQtd(i.minimo) + ")").join("\n");
+  }
+  function renderCompras() {
+    const body = $("#compras-body");
+    if (state.dbStatus !== "ok" || !state.itensLoaded) { body.replaceChildren(h("p", { class: "muted", text: state.dbStatus === "off" ? "Abra a página pelo claude.ai para ver a lista." : "Carregando…" })); return; }
+    const lista = state.itens.filter(precisaComprar).sort((a, b) => situacao(a).ordem - situacao(b).ordem || porNome(a, b));
+    if (!lista.length) {
+      body.replaceChildren(h("div", { class: "card empty" }, h("h2", { text: "Nada para comprar" }),
+        h("p", { text: state.itens.length ? "Todos os itens com estoque mínimo definido estão acima dele." : "Cadastre itens com estoque mínimo para a lista se montar sozinha." })));
+      return;
+    }
+    const ul = h("ul", { id: "lista-compras" }, lista.map((i) => h("li", null,
+      h("span", { text: i.nome }), h("span", { class: "qty", text: fmtQtd(sugestao(i)) + " " + (i.unidade || "un") }),
+      h("small", { text: "Saldo " + fmtQtd(i.saldo) + " · mínimo " + fmtQtd(i.minimo) + (i.custoMedio > 0 ? " · estimativa " + fmtBRL(sugestao(i) * i.custoMedio) : "") }))));
+    const total = lista.reduce((s, i) => s + sugestao(i) * (i.custoMedio || 0), 0);
+    const btn = h("button", { class: "btn", type: "button" }, "Copiar lista");
+    btn.addEventListener("click", () => {
+      const txt = textoLista(lista);
+      const fallback = () => {
+        const sel = window.getSelection(), r = document.createRange();
+        r.selectNodeContents(ul); sel.removeAllRanges(); sel.addRange(r);
+        toast("Lista selecionada. Use Ctrl+C para copiar.");
+      };
+      try { navigator.clipboard.writeText(txt).then(() => toast("Lista copiada.")).catch(fallback); } catch (e) { fallback(); }
+    });
+    body.replaceChildren(h("div", { class: "note" },
+      h("h2", { text: "Lista de compras" }),
+      h("p", { class: "note-sub", text: lista.length + (lista.length === 1 ? " item abaixo do mínimo" : " itens abaixo do mínimo") + ". A quantidade sugerida repõe até o dobro do mínimo." + (total > 0 ? " Estimativa pelo custo médio: " + fmtBRL(total) + "." : "") }),
+      ul,
+      h("div", { class: "note-actions" }, btn)));
+  }
+
+  // ---------- diálogo ----------
+  const dlg = $("#dlg");
+  function abrirDialogo(...conteudo) {
+    dlg.replaceChildren(...conteudo);
+    if (!dlg.open) { try { dlg.showModal(); } catch (e) { dlg.setAttribute("open", ""); } }
+  }
+  function fecharDialogo() { if (dlg.open) dlg.close(); }
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) fecharDialogo(); });
+  const cabecalho = (titulo) => h("div", { class: "dlg-head" }, h("h2", { id: "dlg-title", text: titulo }), h("button", { class: "x", type: "button", "aria-label": "Fechar", onclick: fecharDialogo }, "×"));
+
+  function abrirFormItem(item) {
+    const novo = !item;
+    const f = (id, rot, input) => h("div", { class: "field" }, h("label", { for: id, text: rot }), input);
+    const nome = h("input", { id: "i-nome", required: true, value: item ? item.nome : "", autocomplete: "off" });
+    const cat = h("input", { id: "i-cat", list: "dl-categorias", value: item ? item.categoria || "" : "", autocomplete: "off" });
+    const UNIDADES = [["un", "Unidade (un)"], ["cx", "Caixa (cx)"], ["pct", "Pacote (pct)"], ["resma", "Resma (500 folhas)"], ["rolo", "Rolo"], ["bloco", "Bloco"], ["fardo", "Fardo"], ["par", "Par"], ["kg", "Quilo (kg)"], ["L", "Litro (L)"]];
+    const unAtual = item ? item.unidade || "un" : "un";
+    if (!UNIDADES.some(([v]) => v === unAtual)) UNIDADES.push([unAtual, unAtual]);
+    const un = h("select", { id: "i-un" }, UNIDADES.map(([v, rot]) => h("option", { value: v }, rot)));
+    un.value = unAtual;
+    const campoUn = h("div", { class: "field" },
+      h("label", { for: "i-un", text: "Unidade (como o item é contado)" }), un,
+      h("small", { class: "muted", style: "font-size:12px", text: "Ex.: caneta por unidade, clipes por caixa, papel por resma. A quantidade vai em Estoque mínimo e nas entradas." }));
+    const min = h("input", { id: "i-min", type: "number", min: "0", step: "any", value: item ? item.minimo || 0 : "", inputmode: "decimal" });
+    const local = h("input", { id: "i-local", list: "dl-locais", value: item ? item.local || "" : "", autocomplete: "off", placeholder: "Ex.: Armário 1" });
+    const saldoIni = h("input", { id: "i-saldo", type: "number", min: "0", step: "any", inputmode: "decimal", placeholder: "0" });
+    const custoIni = h("input", { id: "i-custo", type: "number", min: "0", step: "0.01", inputmode: "decimal", placeholder: "0,00" });
+    const erro = h("p", { class: "form-error", hidden: true });
+    const salvar = h("button", { class: "btn primary", type: "submit" }, novo ? "Cadastrar item" : "Salvar alterações");
+    const form = h("form", { class: "dlg-body", novalidate: true },
+      h("div", { class: "fields" },
+        h("div", { class: "field", style: "grid-column: 1 / -1" }, h("label", { for: "i-nome", text: "Nome do item" }), nome),
+        f("i-cat", "Categoria", cat), campoUn, f("i-min", "Estoque mínimo (quantidade)", min), f("i-local", "Local", local),
+        novo ? f("i-saldo", "Saldo atual (opcional)", saldoIni) : null,
+        novo ? f("i-custo", "Custo unitário (R$, opcional)", custoIni) : null),
+      erro,
+      h("div", { class: "row-actions" }, salvar, h("button", { class: "btn", type: "button", onclick: () => (novo ? fecharDialogo() : abrirDetalhe(item.id)) }, "Cancelar")));
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      erro.hidden = true;
+      if (state.dbStatus !== "ok") { erro.textContent = "O banco desta página não está disponível."; erro.hidden = false; return; }
+      const dados = { nome: nome.value.trim(), categoria: cat.value.trim(), unidade: un.value.trim() || "un", minimo: round(parseFloat(min.value) || 0), local: local.value.trim() };
+      if (!dados.nome) { erro.textContent = "Informe o nome do item."; erro.hidden = false; nome.focus(); return; }
+      if (state.itens.some((i) => i.id !== (item && item.id) && norm(i.nome) === norm(dados.nome))) { erro.textContent = "Já existe um item com esse nome."; erro.hidden = false; return; }
+      comBusy(salvar, async () => {
+        if (novo) {
+          const ref = await state.db.collection("itens").add(Object.assign(dados, { saldo: 0, custoMedio: 0, criadoEm: new Date().toISOString() }));
+          const s = parseFloat(saldoIni.value) || 0;
+          if (s > 0) await registrar("entrada", Object.assign({ id: ref.id }, dados, { saldo: 0, custoMedio: 0 }), s, { custoUnit: parseFloat(custoIni.value) || 0, obs: "Saldo inicial" });
+          toast("Item cadastrado: " + dados.nome + ".");
+          fecharDialogo();
+        } else {
+          state.detalheId = item.id;
+          state.atualizarDetalhe = true;
+          await state.db.doc("itens/" + item.id).update(Object.assign(dados, { atualizadoEm: new Date().toISOString() }));
+          toast("Alterações salvas.");
+          abrirDetalhe(item.id);
+        }
+      });
+    });
+    abrirDialogo(cabecalho(novo ? "Novo item" : "Editar item"), form);
+    setTimeout(() => nome.focus(), 0);
+  }
+
+  function abrirDetalhe(id) {
+    const it = itemPorId(id);
+    if (!it) { fecharDialogo(); return; }
+    state.detalheId = id;
+    const s = situacao(it), un = it.unidade || "un";
+    const fato = (rot, val) => h("div", { class: "fact" }, h("span", { text: rot }), h("b", { class: typeof val === "number" ? "num" : "", text: String(val) }));
+    const contado = h("input", { id: "c-qtd", type: "number", min: "0", step: "any", inputmode: "decimal", placeholder: fmtQtd(it.saldo) });
+    const btnAjuste = h("button", { class: "btn", type: "button" }, "Ajustar saldo");
+    btnAjuste.addEventListener("click", () => {
+      const v = parseFloat(contado.value);
+      if (!(v >= 0)) { toast("Informe a quantidade contada.", "erro"); contado.focus(); return; }
+      const delta = round(v - (it.saldo || 0));
+      if (delta === 0) { toast("O saldo já confere com a contagem."); return; }
+      comBusy(btnAjuste, async () => {
+        state.atualizarDetalhe = true;
+        await registrar("ajuste", it, delta, { obs: "Contagem física: " + fmtQtd(v) + " " + un });
+        toast("Saldo ajustado para " + fmtQtd(v) + " " + un + ".");
+      });
+    });
+    const zonaExcluir = h("div");
+    const pedirExclusao = () => {
+      const btnSim = h("button", { class: "btn danger solid small", type: "button" }, "Excluir");
+      btnSim.addEventListener("click", () => comBusy(btnSim, async () => {
+        await state.db.doc("itens/" + it.id).delete();
+        toast("Item excluído. O histórico de movimentações foi mantido.");
+        fecharDialogo();
+      }));
+      zonaExcluir.replaceChildren(h("div", { class: "confirm" },
+        h("p", { text: "Excluir “" + it.nome + "”? O histórico de movimentações continua disponível." }),
+        h("button", { class: "btn small", type: "button", onclick: () => zonaExcluir.replaceChildren(botaoExcluir) }, "Cancelar"), btnSim));
+    };
+    const botaoExcluir = h("button", { class: "btn danger small", type: "button", onclick: pedirExclusao }, "Excluir item");
+    zonaExcluir.className = "so-edicao";
+    zonaExcluir.append(botaoExcluir);
+    const movsBox = h("ul", { class: "mini-list" }, h("li", { class: "muted" }, "Carregando movimentações…"));
+
+    abrirDialogo(cabecalho(it.nome), h("div", { class: "dlg-body" },
+      h("div", null, h("span", { class: "pill " + s.cls, text: s.txt })),
+      h("div", { class: "facts" },
+        fato("Saldo", fmtQtd(it.saldo) + " " + un), fato("Mínimo", it.minimo > 0 ? fmtQtd(it.minimo) + " " + un : "Não definido"),
+        fato("Local", it.local || "—"), fato("Categoria", it.categoria || "—"),
+        fato("Custo médio", it.custoMedio > 0 ? fmtBRL(it.custoMedio) : "—"), fato("Valor em estoque", fmtBRL(Math.max(it.saldo || 0, 0) * (it.custoMedio || 0)))),
+      h("div", { class: "row-actions so-edicao" },
+        h("button", { class: "btn primary", type: "button", onclick: () => abrirMovimento(it.id, "entrada") }, "Registrar entrada"),
+        h("button", { class: "btn", type: "button", onclick: () => abrirMovimento(it.id, "saida") }, "Registrar saída"),
+        h("button", { class: "btn", type: "button", onclick: () => abrirFormItem(it) }, "Editar")),
+      h("p", { class: "dlg-section-title so-edicao", text: "Contagem física" }),
+      h("div", { class: "count-box so-edicao" }, h("div", { class: "field" }, h("label", { for: "c-qtd", text: "Quantidade contada (" + un + ")" }), contado), btnAjuste),
+      h("p", { class: "dlg-section-title", text: "Últimas movimentações" }),
+      movsBox,
+      zonaExcluir));
+
+    if (state.db) {
+      state.db.collection("movs").where("itemId", "==", it.id).orderBy("quando", "desc").limit(15).get().then((snap) => {
+        const ms = snap.docs.map((d) => d.data());
+        movsBox.replaceChildren(...(ms.length ? ms.map((m) => h("li", null,
+          h("span", null, fmtData(m.quando) + " · " + (ROTULO[m.tipo] || ["—"])[0] + (descreverMov(m) ? " · " + descreverMov(m) : ""), m.por ? [" · ", porSpan(m)] : null),
+          h("span", { class: "num " + (sinal(m) > 0 ? "qty-in" : "qty-out"), text: qtdAssinada(m) }))) : [h("li", { class: "muted" }, "Nenhuma movimentação registrada.")]));
+        resolverNomes(movsBox);
+      }).catch(() => movsBox.replaceChildren(h("li", { class: "muted" }, "Não foi possível carregar as movimentações.")));
+    }
+  }
+
+  // ---------- render geral ----------
+  function renderTudo() {
+    renderResumo();
+    renderEstoque();
+    preencherSelectItens();
+    preencherListas();
+    atualizarFormMov();
+    renderCompras();
+    renderHistorico();
+    if (state.tab === "relatorios") renderRelatorios();
+    if (state.atualizarDetalhe && dlg.open && state.detalheId) {
+      state.atualizarDetalhe = false;
+      abrirDetalhe(state.detalheId);
+    }
+  }
+  dlg.addEventListener("close", () => { state.detalheId = null; state.atualizarDetalhe = false; });
+
+  const hashInicial = (location.hash || "").replace("#", "");
+  irPara(TABS.includes(hashInicial) ? hashInicial : "estoque");
+  renderTudo();
+  conectar();
+})();
+</script>

@@ -1487,6 +1487,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         const d = it.decisao === "aprovado"
           ? h("span", { class: "pill ok", text: "Aprovado " + fmtQtd(it.qtd_aprovada) + " " + it.unidade })
           : it.decisao === "reprovado" ? h("span", { class: "pill crit", text: "Reprovado" })
+          : p.status === "cancelado" ? h("span", { class: "pill adj", text: "Cancelado" })
           : h("span", { class: "pill warn", text: "Aguardando" });
         decisao = h("div", null, d, it.motivo ? h("span", { class: "ped-motivo", text: it.motivo }) : null);
       }
