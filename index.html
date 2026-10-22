@@ -257,19 +257,58 @@ td.sel { cursor: default; }
 
 /* Pedidos */
 .papel-solicitante .so-estoque { display: none !important; }
-.pedidos-grid { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 16px; align-items: start; }
-.pedidos-grid.sem-form { grid-template-columns: minmax(0, 1fr); }
-.ped-form { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-.ped-form h3, .ped-lista-titulo { font-size: 17px; }
-.ped-lista-titulo { margin-right: auto; }
-.ped-form > p.muted { margin: -6px 0 0; font-size: 13px; }
-.ped-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
-.ped-add-item { flex: 1 1 100%; }
-.ped-add-qtd { flex: 1 1 110px; }
+.ped-lista-titulo { font-size: 17px; margin-right: auto; }
+/* Fazer pedido / Meus pedidos */
+.seg button { appearance: none; border: 0; background: none; padding: 7px 16px; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.seg .count, .carrinho-head .count { font-family: var(--f-mono); font-size: 12px; background: var(--warn-bg); color: var(--warn); border-radius: 99px; padding: 0 7px; }
+/* Vitrine: um cartão por material, como numa loja */
+.loja { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 16px; align-items: start; }
+.loja-vitrine { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.loja-cats { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.loja-cats:empty { display: none; }
+.chip { appearance: none; border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 5px 13px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; transition: color .15s, border-color .15s; }
+.chip:hover { color: var(--ink); border-color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.loja-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.loja-grade > .empty, .loja-grade > p { grid-column: 1 / -1; }
+.loja-item { padding: 14px; display: flex; flex-direction: column; gap: 6px; transition: border-color .15s, box-shadow .15s; }
+.loja-item.no-carrinho { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+.loja-topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 6px 8px; margin-bottom: 4px; }
+.loja-tile { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-family: var(--f-display); font-weight: 700; font-size: 15px; flex: none; }
+.loja-item h4 { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.loja-acao { margin-top: auto; padding-top: 8px; }
+.loja-acao > .btn { width: 100%; }
+.loja-acao .stepper .un { display: none; } /* a unidade já aparece no cartão; sobra espaço para o número */
+.loja-acao .stepper input { text-align: center; }
+.stepper { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.stepper button { appearance: none; border: 0; background: var(--surface-2); width: 36px; height: 36px; font-size: 18px; line-height: 1; cursor: pointer; color: var(--ink); flex: none; }
+.stepper button:hover { color: var(--accent); }
+.stepper input { flex: 1 1 auto; width: 3ch; min-width: 0; border: 0; background: none; text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; padding: 0 4px; height: 36px; -moz-appearance: textfield; appearance: textfield; }
+.stepper input::-webkit-inner-spin-button, .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper input:focus { outline: none; }
+.stepper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.stepper .un { flex: 1 1 auto; font-size: 12px; color: var(--muted); padding-right: 6px; }
+/* Carrinho: fica ao lado da vitrine, acompanhando a rolagem */
+.carrinho { padding: 18px; display: flex; flex-direction: column; gap: 12px; position: sticky; top: 76px; max-height: calc(100dvh - 92px); overflow-y: auto; }
+.carrinho-head { display: flex; align-items: center; gap: 8px; }
+.carrinho-head svg { width: 20px; height: 20px; color: var(--accent); flex: none; }
+.carrinho-head h3 { font-size: 17px; }
+.carrinho > p.muted { margin: -6px 0 0; font-size: 13px; }
+.carrinho-aviso { margin: 0; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: var(--crit-bg); color: var(--crit); }
 .ped-linhas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.ped-linhas:empty::before { content: "Nenhum item adicionado ainda."; color: var(--muted); font-size: 13px; }
-.ped-linhas li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); font-size: 14px; }
-.ped-linhas li span:first-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.ped-linhas:empty::before { content: "Seu carrinho está vazio. Escolha os materiais e toque em Adicionar."; color: var(--muted); font-size: 13px; }
+.ped-linhas li { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); font-size: 14px; }
+.linha-topo { display: flex; align-items: flex-start; gap: 8px; }
+.linha-topo .item-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.linha-topo .x { padding: 0 6px; font-size: 20px; }
+.linha-qtd { display: flex; align-items: center; gap: 10px; }
+.linha-qtd .stepper { flex: 0 0 150px; }
+.linha-qtd .stepper button, .linha-qtd .stepper input { height: 30px; }
+.linha-qtd .stepper button { width: 30px; }
+.carrinho-barra { display: none; }
+.pedidos-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .ped-lista { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ped-cards { display: flex; flex-direction: column; gap: 12px; }
 .ped-card { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; border-left: 5px solid var(--line); }
@@ -375,7 +414,13 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
 .toast.erro { background: var(--crit); color: var(--surface); }
 
 @media (max-width: 760px) {
-  .mov-grid, .pessoas-grid, .pedidos-grid { grid-template-columns: minmax(0, 1fr); }
+  .mov-grid, .pessoas-grid, .loja { grid-template-columns: minmax(0, 1fr); }
+  .carrinho { position: static; max-height: none; overflow: visible; scroll-margin-top: 76px; }
+  .loja-grade { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  /* no celular o carrinho fica embaixo; esta barra mostra quanto já tem e leva até ele */
+  .carrinho-barra { position: fixed; left: 16px; right: 16px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 6; display: flex; align-items: center; gap: 10px; padding: 13px 16px; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 14px; cursor: pointer; box-shadow: var(--shadow-lg); }
+  .carrinho-barra svg { width: 20px; height: 20px; flex: none; }
+  #p-pedidos { padding-bottom: 72px; }
   .hide-sm { display: none; }
   td, th { padding: 10px; }
 }
@@ -610,21 +655,36 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
 
   <!-- Pedidos dos setores -->
   <section class="panel" id="p-pedidos" role="tabpanel" aria-labelledby="t-pedidos" hidden>
-    <div class="pedidos-grid" id="ped-grid">
-      <form class="card ped-form" id="ped-form" novalidate>
-        <h3>Novo pedido</h3>
-        <p class="muted" id="ped-setor-info">Setor: —</p>
-        <div class="ped-add">
-          <div class="field ped-add-item"><label for="ped-item">Item</label><select id="ped-item"></select></div>
-          <div class="field ped-add-qtd"><label for="ped-qtd">Quantidade</label><input id="ped-qtd" type="number" min="0" step="any" inputmode="decimal"></div>
-          <button class="btn" type="button" id="ped-add">Adicionar</button>
+    <div class="seg ped-modo" id="ped-modo" role="group" aria-label="Pedidos">
+      <button type="button" data-modo="loja" aria-pressed="true">Fazer pedido</button>
+      <button type="button" data-modo="lista" aria-pressed="false"><span id="ped-modo-lista">Meus pedidos</span> <span class="count" id="ped-modo-count" hidden></span></button>
+    </div>
+    <!-- vitrine de materiais + carrinho -->
+    <div class="loja" id="ped-loja">
+      <div class="loja-vitrine">
+        <div class="toolbar"><input class="grow" id="loja-busca" type="search" placeholder="Buscar material" aria-label="Buscar material" autocomplete="off"></div>
+        <div class="loja-cats" id="loja-cats" role="group" aria-label="Filtrar por categoria"></div>
+        <div class="loja-grade" id="loja-grade"></div>
+      </div>
+      <form class="card carrinho" id="ped-form" novalidate>
+        <div class="carrinho-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a1 1 0 0 0 1 .8h9.7a1 1 0 0 0 1-.8L21 7H6"/></svg>
+          <h3>Carrinho</h3><span class="count num" id="carrinho-qtd">0</span>
         </div>
+        <p class="muted" id="ped-setor-info">Setor: —</p>
         <ul class="ped-linhas" id="ped-linhas"></ul>
+        <p class="carrinho-aviso" id="carrinho-aviso" hidden>Itens em falta podem demorar ou ser reprovados. O almoxarifado avisa na análise.</p>
         <div class="field"><label for="ped-obs">Observação (opcional)</label><input id="ped-obs" autocomplete="off" placeholder="Ex.: material para o novo funcionário"></div>
         <p class="form-error" id="ped-erro" hidden></p>
         <button class="btn primary" type="submit" id="ped-enviar">Enviar pedido</button>
       </form>
-      <div class="ped-lista">
+    </div>
+    <button class="carrinho-barra" id="carrinho-barra" type="button" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a1 1 0 0 0 1 .8h9.7a1 1 0 0 0 1-.8L21 7H6"/></svg>
+      <span id="carrinho-barra-txt"></span><span class="spacer"></span>Ver carrinho →
+    </button>
+    <div class="pedidos-grid" id="ped-grid">
+      <div class="ped-lista" id="ped-lista">
         <div class="toolbar">
           <h3 class="ped-lista-titulo" id="ped-lista-titulo">Pedidos</h3>
           <select id="ped-filtro" aria-label="Filtrar pedidos">
@@ -753,6 +813,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     me: null, itens: [], itensLoaded: false, movs: [], perfis: {}, tab: "estoque", relSeq: 0,
     sel: new Set(), confirmarMassa: false, detalheId: null, atualizarDetalhe: false, timer: null,
     pedidos: [], pedidosLoaded: false, catalogo: [], pedLinhas: [], pedConfirm: {},
+    pedModo: "loja", lojaCat: "",
   };
   const podeEditar = () => state.me && (state.me.papel === "admin" || state.me.papel === "operador");
   const ehAdmin = () => state.me && state.me.papel === "admin";
@@ -938,6 +999,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       return;
     }
     state.me = perfil;
+    carregarCarrinho();
     document.body.classList.toggle("papel-consulta", perfil.papel === "consulta" || perfil.papel === "solicitante");
     document.body.classList.toggle("papel-solicitante", perfil.papel === "solicitante");
     document.body.classList.toggle("nao-admin", perfil.papel !== "admin");
@@ -1547,52 +1609,119 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     c.textContent = n;
   }
 
-  // formulário de novo pedido
-  function preencherSelectPedido() {
-    const sel = $("#ped-item"), atual = sel.value;
-    const itens = state.catalogo.slice().sort(porNome);
-    sel.replaceChildren(h("option", { value: "" }, itens.length ? "Escolha um item" : "Nenhum item cadastrado no almoxarifado"),
-      ...itens.map((i) => h("option", { value: i.id }, i.nome + " (" + (i.unidade || "un") + ") — " + (DISP[i.disponibilidade] || ""))));
-    sel.value = itens.some((i) => i.id === atual) ? atual : "";
+  // ---------- novo pedido: vitrine e carrinho ----------
+  // O carrinho fica guardado neste navegador, por pessoa, até o pedido ser enviado.
+  const DISP_PILL = { disponivel: "ok", pouco: "warn", falta: "crit" };
+  const chaveCarrinho = () => "almox-carrinho-" + state.me.user_id;
+  function carregarCarrinho() {
+    try {
+      const v = JSON.parse(localStorage.getItem(chaveCarrinho()) || "[]");
+      state.pedLinhas = Array.isArray(v) ? v.filter((l) => l && l.item_id && num(l.qtd) > 0).map((l) => ({ item_id: l.item_id, qtd: round(l.qtd) })) : [];
+    } catch { state.pedLinhas = []; }
   }
-  function renderLinhasPedido() {
-    const ul = $("#ped-linhas");
-    ul.replaceChildren(...state.pedLinhas.map((l, idx) => h("li", null,
-      h("span", null, l.nome, " ", h("span", { class: "disp " + l.disponibilidade, text: "· " + (DISP[l.disponibilidade] || "") })),
-      h("span", { class: "num", text: fmtQtd(l.qtd) + " " + l.unidade }),
-      h("button", { class: "x", type: "button", "aria-label": "Remover " + l.nome, onclick: () => { state.pedLinhas.splice(idx, 1); renderLinhasPedido(); } }, "×"))));
+  function salvarCarrinho() {
+    try { localStorage.setItem(chaveCarrinho(), JSON.stringify(state.pedLinhas)); } catch {}
   }
-  $("#ped-add").addEventListener("click", () => {
-    const erro = $("#ped-erro");
-    erro.hidden = true;
-    const it = state.catalogo.find((i) => i.id === $("#ped-item").value);
-    const qtd = parseFloat($("#ped-qtd").value);
-    if (!it) { erro.textContent = "Escolha o item."; erro.hidden = false; return; }
-    if (!(qtd > 0)) { erro.textContent = "Informe a quantidade."; erro.hidden = false; $("#ped-qtd").focus(); return; }
-    const existente = state.pedLinhas.find((l) => l.item_id === it.id);
-    if (existente) existente.qtd = round(existente.qtd + qtd);
-    else state.pedLinhas.push({ item_id: it.id, nome: it.nome, unidade: it.unidade || "un", disponibilidade: it.disponibilidade, qtd: round(qtd) });
-    $("#ped-qtd").value = "";
-    $("#ped-item").value = "";
-    renderLinhasPedido();
-    $("#ped-item").focus();
-  });
+  const itemCatalogo = (id) => state.catalogo.find((i) => i.id === id);
+  const linhaCarrinho = (id) => state.pedLinhas.find((l) => l.item_id === id);
+  function mudarQtd(id, qtd) {
+    qtd = round(qtd);
+    const linha = linhaCarrinho(id);
+    if (qtd > 0 && linha) linha.qtd = qtd;
+    else if (qtd > 0) state.pedLinhas.push({ item_id: id, qtd });
+    else state.pedLinhas = state.pedLinhas.filter((l) => l.item_id !== id);
+    $("#ped-erro").hidden = true;
+    salvarCarrinho();
+    renderLoja();
+  }
+  // tira do carrinho o que saiu do catálogo desde a última visita
+  function conferirCarrinho() {
+    const antes = state.pedLinhas.length;
+    state.pedLinhas = state.pedLinhas.filter((l) => itemCatalogo(l.item_id));
+    if (state.pedLinhas.length < antes) { salvarCarrinho(); toast("Um material saiu do catálogo e foi retirado do seu carrinho."); }
+  }
+  const sigla = (nome) => {
+    const p = String(nome || "?").split(/\s+/).filter((w) => /[a-zà-ÿ0-9]/i.test(w));
+    return (p.length > 1 ? p[0][0] + p[1][0] : (p[0] || "?").slice(0, 2)).toUpperCase();
+  };
+
+  // − quantidade +; "foco" deixa o teclado no mesmo botão depois de redesenhar
+  function stepper(it, linha, onde) {
+    const inp = h("input", { type: "number", min: "0", step: "any", inputmode: "decimal", value: linha.qtd, "aria-label": "Quantidade de " + it.nome, "data-foco": onde + "=" + it.id });
+    inp.addEventListener("change", () => mudarQtd(it.id, parseFloat(inp.value) || 0));
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); mudarQtd(it.id, parseFloat(inp.value) || 0); } });
+    return h("div", { class: "stepper" },
+      h("button", { type: "button", "aria-label": (linha.qtd <= 1 ? "Tirar do carrinho: " : "Diminuir ") + it.nome, "data-foco": onde + "-" + it.id, onclick: () => mudarQtd(it.id, linha.qtd - 1) }, "−"),
+      inp, h("span", { class: "un", text: it.unidade || "un" }),
+      h("button", { type: "button", "aria-label": "Aumentar " + it.nome, "data-foco": onde + "+" + it.id, onclick: () => mudarQtd(it.id, linha.qtd + 1) }, "+"));
+  }
+  function cardLoja(it) {
+    const linha = linhaCarrinho(it.id);
+    return h("article", { class: "card loja-item" + (linha ? " no-carrinho" : "") },
+      h("div", { class: "loja-topo" },
+        h("span", { class: "loja-tile", "aria-hidden": "true", text: sigla(it.nome) }),
+        h("span", { class: "pill " + (DISP_PILL[it.disponibilidade] || "adj"), text: DISP[it.disponibilidade] || "" })),
+      h("h4", { text: it.nome }),
+      h("div", { class: "item-sub", text: (it.categoria || "Outros") + " · " + (it.unidade || "un") }),
+      h("div", { class: "loja-acao" }, linha ? stepper(it, linha, "g")
+        : h("button", { class: "btn", type: "button", "data-foco": "g+" + it.id, "aria-label": "Adicionar " + it.nome + " ao carrinho", onclick: () => mudarQtd(it.id, 1) }, "+ Adicionar")));
+  }
+  function renderCarrinho() {
+    const linhas = state.pedLinhas.map((l) => ({ l, it: itemCatalogo(l.item_id) })).filter((x) => x.it);
+    $("#ped-linhas").replaceChildren(...linhas.map(({ l, it }) => h("li", null,
+      h("div", { class: "linha-topo" },
+        h("span", { class: "item-name", text: it.nome }),
+        h("button", { class: "x", type: "button", "aria-label": "Tirar " + it.nome + " do carrinho", onclick: () => mudarQtd(it.id, 0) }, "×")),
+      h("div", { class: "linha-qtd" }, stepper(it, l, "c"), h("span", { class: "disp " + it.disponibilidade, text: DISP[it.disponibilidade] || "" })))));
+    const n = linhas.length;
+    $("#carrinho-qtd").textContent = n;
+    $("#carrinho-aviso").hidden = !linhas.some(({ it }) => it.disponibilidade === "falta");
+    $("#carrinho-barra").hidden = !n || $("#ped-loja").hidden;
+    $("#carrinho-barra-txt").textContent = n + (n === 1 ? " material no carrinho" : " materiais no carrinho");
+  }
+  function renderLoja() {
+    const foco = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.foco : null;
+    const cats = [...new Set(state.catalogo.map((i) => i.categoria || "Outros"))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    if (state.lojaCat && !cats.includes(state.lojaCat)) state.lojaCat = "";
+    const chip = (valor, rotulo) => h("button", { class: "chip", type: "button", "aria-pressed": String(state.lojaCat === valor), "data-foco": "cat:" + valor,
+      onclick: () => { state.lojaCat = valor; renderLoja(); } }, rotulo);
+    $("#loja-cats").replaceChildren(...(cats.length > 1 ? [chip("", "Todos"), ...cats.map((c) => chip(c, c))] : []));
+
+    const busca = norm($("#loja-busca").value.trim());
+    const lista = state.catalogo.filter((i) => (!state.lojaCat || (i.categoria || "Outros") === state.lojaCat)
+      && (!busca || norm(i.nome + " " + (i.categoria || "")).includes(busca))).sort(porNome);
+    const grade = $("#loja-grade");
+    if (!state.pedidosLoaded) grade.replaceChildren(h("p", { class: "muted", text: "Carregando materiais…" }));
+    else if (!lista.length) grade.replaceChildren(h("div", { class: "card empty" },
+      h("h2", { text: state.catalogo.length ? "Nada encontrado" : "Nenhum material no catálogo" }),
+      h("p", { text: state.catalogo.length ? "Tente outro nome ou outra categoria." : "Quando o almoxarifado cadastrar os materiais, eles aparecem aqui." })));
+    else grade.replaceChildren(...lista.map(cardLoja));
+    renderCarrinho();
+    if (foco) { const el = document.querySelector('[data-foco="' + CSS.escape(foco) + '"]'); if (el) el.focus(); }
+  }
+  $("#loja-busca").addEventListener("input", renderLoja);
+  document.querySelectorAll("#ped-modo button").forEach((b) => b.addEventListener("click", () => { state.pedModo = b.dataset.modo; renderPedidos(); }));
+  $("#carrinho-barra").addEventListener("click", () => $("#ped-form").scrollIntoView({ behavior: "smooth", block: "start" }));
+
   $("#ped-form").addEventListener("submit", (e) => {
     e.preventDefault();
     const erro = $("#ped-erro");
     erro.hidden = true;
-    if (!state.pedLinhas.length) { erro.textContent = "Adicione pelo menos um item ao pedido."; erro.hidden = false; return; }
+    conferirCarrinho();
+    if (!state.pedLinhas.length) { erro.textContent = "Seu carrinho está vazio. Adicione pelo menos um material."; erro.hidden = false; return; }
     comBusy($("#ped-enviar"), async () => {
       let criado;
       try {
         criado = await q(sb.rpc("criar_pedido", { p_itens: state.pedLinhas.map((l) => ({ item_id: l.item_id, qtd: l.qtd })), p_obs: $("#ped-obs").value.trim() || null }));
       } catch (err) { erro.textContent = msgErro(err); erro.hidden = false; return; }
-      state.pedLinhas = [];
-      $("#ped-obs").value = "";
-      renderLinhasPedido();
       confete($("#ped-enviar"));
-      toast("Pedido nº " + criado.numero + " enviado. Acompanhe a aprovação na lista ao lado.");
+      state.pedLinhas = [];
+      salvarCarrinho();
+      $("#ped-obs").value = "";
+      state.pedModo = "lista";
+      toast("Pedido nº " + criado.numero + " enviado. Acompanhe a aprovação em " + (ehSolicitante() ? "Meus pedidos." : "Pedidos dos setores."));
       await carregarTudo();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     });
   });
   $("#ped-filtro").addEventListener("input", renderPedidos);
@@ -1604,12 +1733,19 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     state.pedSujo = false;
     atualizarContadorPedidos();
     const pode = podePedir();
-    $("#ped-form").hidden = !pode;
-    $("#ped-grid").classList.toggle("sem-form", !pode);
-    $("#ped-setor-info").textContent = "Setor: " + (meuSetor() || "—");
+    const modo = pode ? state.pedModo : "lista";
+    $("#ped-modo").hidden = !pode;
+    $("#ped-loja").hidden = modo !== "loja";
+    $("#ped-grid").hidden = modo !== "lista";
+    document.querySelectorAll("#ped-modo button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.modo === modo)));
+    $("#ped-modo-lista").textContent = ehSolicitante() ? "Meus pedidos" : "Pedidos dos setores";
+    const abertos = state.pedidos.filter((p) => ["pendente", "aprovado", "parcial"].includes(p.status)).length;
+    $("#ped-modo-count").hidden = !abertos;
+    $("#ped-modo-count").textContent = abertos;
+    $("#ped-setor-info").textContent = "Pedido em nome do setor " + (meuSetor() || "—");
     $("#ped-lista-titulo").textContent = ehSolicitante() ? "Pedidos do setor " + meuSetor() : "Pedidos dos setores";
-    preencherSelectPedido();
-    renderLinhasPedido();
+    if (pode && state.pedidosLoaded) conferirCarrinho();
+    renderLoja();
 
     const alvo = $("#ped-cards");
     if (!state.pedidosLoaded) { alvo.replaceChildren(h("p", { class: "muted", text: "Carregando pedidos…" })); return; }
@@ -1622,7 +1758,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     if (!lista.length) {
       alvo.replaceChildren(h("div", { class: "card empty" },
         h("h2", { text: state.pedidos.length ? "Nenhum pedido neste filtro" : "Nenhum pedido ainda" }),
-        h("p", { text: pode ? "Monte o pedido ao lado: escolha os itens, informe as quantidades e envie. O almoxarifado analisa e você acompanha aqui." : "Quando os setores enviarem pedidos de material, eles aparecem aqui para análise e entrega." })));
+        h("p", { text: pode ? "Em Fazer pedido, escolha os materiais, coloque no carrinho e envie. O almoxarifado analisa e você acompanha aqui." : "Quando os setores enviarem pedidos de material, eles aparecem aqui para análise e entrega." })));
       return;
     }
     alvo.replaceChildren(...lista.map(cardPedido));
