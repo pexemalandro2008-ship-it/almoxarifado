@@ -698,7 +698,10 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     <!-- vitrine de materiais + carrinho -->
     <div class="loja" id="ped-loja">
       <div class="loja-vitrine">
-        <div class="toolbar"><input class="grow" id="loja-busca" type="search" placeholder="Buscar material" aria-label="Buscar material" autocomplete="off"></div>
+        <div class="toolbar">
+          <input class="grow" id="loja-busca" type="search" placeholder="Buscar material" aria-label="Buscar material" autocomplete="off">
+          <button class="btn" type="button" id="loja-pdf" title="Lista para a equipe anotar quantidade e quem precisa">Lista em PDF</button>
+        </div>
         <div class="loja-cats" id="loja-cats" role="group" aria-label="Filtrar por categoria"></div>
         <div class="loja-grade" id="loja-grade"></div>
       </div>
@@ -1801,6 +1804,10 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     if (foco) { const el = document.querySelector('[data-foco="' + CSS.escape(foco) + '"]'); if (el) el.focus(); }
   }
   $("#loja-busca").addEventListener("input", renderLoja);
+  $("#loja-pdf").addEventListener("click", () => {
+    if (!state.catalogo.length) { toast("Ainda não há materiais no catálogo para gerar a lista.", "erro"); return; }
+    pdfLista();
+  });
 
   // material fora do catálogo: nome, quantidade e unidade escritos pela pessoa
   $("#extra-un").replaceChildren(...UNIDADES.map(([v, rot]) => h("option", { value: v }, rot)));
@@ -1908,6 +1915,116 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       return;
     }
     alvo.replaceChildren(...lista.map(cardPedido));
+  }
+
+  // ---------- PDF: abre uma página pronta para imprimir ou "Salvar como PDF" ----------
+  const CSS_PDF = [
+    "@page { size: A4; margin: 14mm; }",
+    "* { box-sizing: border-box; }",
+    "body { margin: 0; padding: 16px; font: 12px/1.45 'Segoe UI', system-ui, sans-serif; color: #141b33; background: #fff; }",
+    "@media print { body { padding: 0; } }",
+    "header { display: flex; align-items: center; gap: 14px; padding-bottom: 10px; border-bottom: 2px solid #2a3ed0; margin-bottom: 16px; }",
+    "header img { height: 34px; }",
+    "header div { display: flex; flex-direction: column; margin-left: auto; text-align: right; }",
+    "header b { font-size: 14px; } header span { color: #5a6580; font-size: 11px; }",
+    "h1 { font-size: 22px; margin: 0 0 2px; } h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: #2a3ed0; margin: 18px 0 6px; }",
+    ".sub { margin: 0 0 8px; color: #5a6580; }",
+    "table { width: 100%; border-collapse: collapse; page-break-inside: auto; } tr { page-break-inside: avoid; }",
+    "th, td { border: 1px solid #c9cfdc; padding: 6px 8px; text-align: left; vertical-align: top; }",
+    "th { background: #f2f4f9; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; }",
+    "td.c, th.c { text-align: center; width: 9%; } td.q, th.q { width: 15%; } td.quem, th.quem { width: 26%; }",
+    "td.n, th.n { text-align: right; white-space: nowrap; width: 12%; }",
+    "tr.vazia td { height: 26px; }",
+    ".tag { font-size: 10px; color: #2a3ed0; border: 1px solid #2a3ed0; border-radius: 99px; padding: 0 6px; margin-left: 6px; white-space: nowrap; }",
+    ".fatos { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; margin: 10px 0 4px; } .fatos dt { font-weight: 700; } .fatos dd { margin: 0; }",
+    ".obs { margin: 10px 0 0; padding: 8px 10px; border-left: 3px solid #c9cfdc; background: #f7f8fb; }",
+    ".assin { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 56px; page-break-inside: avoid; }",
+    ".assin div { border-top: 1px solid #141b33; padding-top: 4px; text-align: center; color: #5a6580; font-size: 11px; }",
+    ".rodape { margin-top: 18px; color: #5a6580; font-size: 10.5px; }",
+  ].join("\n");
+  const nomeReal = (uid) => { const p = uid && state.perfis[uid]; return (p && (p.nome || p.email)) || ""; };
+  // monta a página num quadro escondido e chama a impressão dele (sem janela nova, que o navegador pode bloquear)
+  let quadroPdf = null;
+  function abrirPdf(titulo, ...conteudo) {
+    if (quadroPdf) quadroPdf.remove();
+    quadroPdf = h("iframe", { title: "PDF", "aria-hidden": "true", tabindex: "-1", style: "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden" });
+    document.body.append(quadroPdf);
+    const w = quadroPdf.contentWindow;
+    w.document.open();
+    w.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><style>' + CSS_PDF + "</style></head><body></body></html>");
+    w.document.close();
+    w.document.title = titulo;
+    const logo = h("img", { src: new URL("logo-cortical.png", location.href).href, alt: "Cortical Medical" });
+    w.document.body.append(
+      h("header", null, logo, h("div", null, h("b", { text: "Almoxarifado do Escritório" }),
+        h("span", { text: "Gerado em " + fmtDataHora(new Date().toISOString()) + (nomeReal(state.me.user_id) ? " por " + nomeReal(state.me.user_id) : "") }))),
+      ...conteudo.flat().filter(Boolean));
+    // imprime depois que o logo carregar (ou falhar), para ele sair no PDF
+    let foi = false;
+    const imprimir = () => {
+      if (foi) return;
+      foi = true;
+      // o Chrome sugere o nome do arquivo pelo título da página principal
+      const antes = document.title;
+      document.title = titulo;
+      w.focus();
+      w.print();
+      setTimeout(() => { document.title = antes; }, 1000);
+    };
+    logo.addEventListener("load", imprimir);
+    logo.addEventListener("error", imprimir);
+    setTimeout(imprimir, 1500);
+  }
+
+  // lista para o responsável passar à equipe: cada um anota quantidade e nome
+  function pdfLista() {
+    const porCat = new Map();
+    for (const it of state.catalogo.slice().sort(porNome)) {
+      const c = it.categoria || "Outros";
+      if (!porCat.has(c)) porCat.set(c, []);
+      porCat.get(c).push(it);
+    }
+    const cab = (...cols) => h("thead", null, h("tr", null, cols.map(([cls, txt]) => h("th", { class: cls, text: txt }))));
+    const setor = meuSetor();
+    abrirPdf("Lista de materiais - " + setor,
+      h("h1", { text: "Lista de materiais" }),
+      h("p", { class: "sub", text: "Setor " + setor + ". Anote a quantidade e quem precisa; o pedido é feito por " + (nomeReal(state.me.user_id) || "quem responde pelo setor") + " no sistema." }),
+      [...porCat].map(([cat, itens]) => h("section", null, h("h2", { text: cat }),
+        h("table", null, cab([null, "Material"], ["c", "Unid."], [null, "Situação"], ["q", "Quantidade"], ["quem", "Quem precisa"]),
+          h("tbody", null, itens.map((it) => h("tr", null,
+            h("td", { text: it.nome }), h("td", { class: "c", text: it.unidade || "un" }), h("td", { text: DISP[it.disponibilidade] || "" }),
+            h("td", { class: "q" }), h("td", { class: "quem" }))))))),
+      h("section", null, h("h2", { text: "Não está na lista" }),
+        h("table", null, cab([null, "Material"], ["c", "Unid."], ["q", "Quantidade"], ["quem", "Quem precisa"]),
+          h("tbody", null, Array.from({ length: 6 }, () => h("tr", { class: "vazia" }, h("td"), h("td", { class: "c" }), h("td", { class: "q" }), h("td", { class: "quem" })))))),
+      h("p", { class: "rodape", text: "Situação do estoque no momento em que a lista foi gerada; pode mudar até o pedido ser enviado." }));
+  }
+
+  // comprovante do pedido, com espaço para assinatura do responsável e de quem entrega
+  function pdfPedido(p) {
+    const [rot] = STATUS_PED[p.status] || [p.status];
+    const itens = (p.pedido_itens || []).slice().sort((a, b) => a.item_nome.localeCompare(b.item_nome, "pt-BR"));
+    const resultado = (it) => it.decisao === "aprovado" ? "Aprovado " + fmtQtd(it.qtd_aprovada) + " " + it.unidade
+      : it.decisao === "reprovado" ? "Reprovado" : p.status === "cancelado" ? "Cancelado" : "Aguardando";
+    const etapas = [["Enviado", p.criado_em, p.solicitante], ["Analisado", p.analisado_em, p.analisado_por],
+      ["Entregue", p.entregue_em, p.entregue_por], ["Cancelado", p.cancelado_em, p.cancelado_por]].filter((e) => e[1]);
+    abrirPdf("Pedido " + p.numero + " - " + p.setor,
+      h("h1", { text: "Pedido nº " + p.numero }),
+      h("p", { class: "sub", text: "Setor " + p.setor + " · Situação: " + rot }),
+      h("dl", { class: "fatos" }, etapas.flatMap(([r, quando, quem]) => [
+        h("dt", { text: r }), h("dd", { text: fmtDataHora(quando) + (nomeReal(quem) ? " · " + nomeReal(quem) : "") })])),
+      p.obs ? h("p", { class: "obs", text: "Observação: " + p.obs }) : null,
+      h("h2", { text: "Materiais" }),
+      h("table", null,
+        h("thead", null, h("tr", null, h("th", { text: "Material" }), h("th", { class: "n", text: "Pedido" }), h("th", { text: "Resultado" }), h("th", { text: "Motivo" }))),
+        h("tbody", null, itens.map((it) => h("tr", null,
+          h("td", null, it.item_nome, it.fora_catalogo ? h("span", { class: "tag", text: "fora do catálogo" }) : null),
+          h("td", { class: "n", text: fmtQtd(it.qtd_pedida) + " " + it.unidade }),
+          h("td", { text: resultado(it) }),
+          h("td", { text: it.motivo || "" }))))),
+      h("div", { class: "assin" },
+        h("div", { text: "Responsável pelo setor " + p.setor }),
+        h("div", { text: "Almoxarifado (entrega)" })));
   }
 
   // para quem pede: etapas do pedido com data, sem os nomes de quem analisou ou entregou
@@ -2019,6 +2136,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         acoes.append(h("button", { class: "btn primary small", type: "button", onclick: () => { state.pedConfirm[p.id] = "entregar"; renderPedidos(); } }, "Registrar entrega"));
       }
     }
+    acoes.append(h("button", { class: "btn small", type: "button", onclick: () => pdfPedido(p) }, "Baixar PDF"));
     const podeCancelar = p.status === "pendente" && (podeEditar() || p.solicitante === state.me.user_id);
     if (podeCancelar) {
       if (confirmando === "cancelar") {
