@@ -911,7 +911,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     const semSaldo = txt.match(/saldo_insuficiente: (.+)/);
     if (semSaldo) return "Saldo insuficiente de " + semSaldo[1] + ". Registre a entrada do material antes de entregar.";
     const excluido = txt.match(/item_excluido: (.+)/);
-    if (excluido) return "O item " + excluido[1] + " foi excluído do estoque e não pode ser entregue.";
+    if (excluido) return "O item " + excluido[1] + " foi excluído do estoque. Cadastre de novo com exatamente o mesmo nome e registre a entrega outra vez.";
     if (/sem_setor/.test(txt)) return "Seu usuário não tem setor definido. Peça ao administrador para definir na aba Pessoas.";
     if (/pedido_vazio/.test(txt)) return "Adicione pelo menos um item ao pedido.";
     if (/pedido_grande/.test(txt)) return "O pedido passou de 100 itens. Divida em dois pedidos.";
@@ -1197,7 +1197,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
           await carregarTudo();
         }));
         barra.replaceChildren(
-          h("p", { text: "Excluir " + rotulo + "? Essa ação não pode ser desfeita; o histórico de movimentações continua disponível." }),
+          h("p", { text: "Excluir " + rotulo + "? Essa ação não pode ser desfeita; o histórico de movimentações continua disponível." + avisoPedidosAbertos([...state.sel]) }),
           h("button", { class: "btn small", type: "button", onclick: () => { state.confirmarMassa = false; atualizarMassa(); } }, "Cancelar"),
           btnSim);
       }
@@ -1627,6 +1627,22 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   const DISP = { disponivel: "Disponível", pouco: "Pouco estoque", falta: "Em falta" };
   const fmtDataHora = (iso) => { const d = new Date(iso); return isNaN(d) ? "—" : d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
 
+  // excluir um item que está em pedido em aberto deixa o pedido sem o item no estoque
+  function avisoPedidosAbertos(ids) {
+    const nums = state.pedidos.filter((p) => ["pendente", "aprovado", "parcial"].includes(p.status)
+      && (p.pedido_itens || []).some((i) => ids.includes(i.item_id))).map((p) => "nº " + p.numero);
+    if (!nums.length) return "";
+    return " Atenção: " + (nums.length === 1 ? "o pedido " + nums[0] + " está" : "os pedidos " + nums.join(", ") + " estão")
+      + " em aberto com este material. Para entregar, será preciso cadastrá-lo de novo com o mesmo nome.";
+  }
+
+  // mesma regra da entrega no banco: nome igual, sem diferenciar maiúsculas e espaços
+  const nomeChave = (s) => String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+  function estoquePorNome(nome) {
+    const iguais = state.itens.filter((i) => nomeChave(i.nome) === nomeChave(nome));
+    return iguais.length === 1 ? iguais[0] : null;
+  }
+
   function atualizarContadorPedidos() {
     const c = $("#ped-count");
     const n = podeEditar() ? state.pedidos.filter((p) => p.status === "pendente").length : 0;
@@ -1875,6 +1891,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       return h("tr", null,
         h("td", null, h("div", { class: "item-name" }, it.item_nome, it.fora_catalogo ? h("span", { class: "pill fora", text: "Fora do catálogo" }) : null),
           it.fora_catalogo && podeEditar() ? h("div", { class: "item-sub", text: "Não está no estoque: comprar à parte" })
+          : !it.item_id && podeEditar() ? h("div", { class: "item-sub disp falta", text: estoquePorNome(it.item_nome) ? "Excluído e cadastrado de novo: a entrega usa o novo cadastro" : "Excluído do estoque: cadastre de novo com o mesmo nome para entregar" })
           : saldo != null ? h("div", { class: "item-sub", text: "Em estoque: " + fmtQtd(saldo) + " " + it.unidade }) : null),
         h("td", { class: "r num", text: fmtQtd(it.qtd_pedida) + " " + it.unidade }),
         h("td", null, decisao));
@@ -2224,7 +2241,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         await carregarTudo();
       }));
       zonaExcluir.replaceChildren(h("div", { class: "confirm" },
-        h("p", { text: "Excluir “" + it.nome + "”? O histórico de movimentações continua disponível." }),
+        h("p", { text: "Excluir “" + it.nome + "”? O histórico de movimentações continua disponível." + avisoPedidosAbertos([it.id]) }),
         h("button", { class: "btn small", type: "button", onclick: () => zonaExcluir.replaceChildren(botaoExcluir) }, "Cancelar"), btnSim));
     });
     zonaExcluir.append(botaoExcluir);
