@@ -307,6 +307,9 @@ td.sel { cursor: default; }
 .disp.fora, .pill.fora { color: var(--accent); }
 .pill.fora { background: var(--accent-soft); margin-left: 6px; vertical-align: 1px; }
 .ped-linhas li.fora { border-style: dashed; }
+.ped-linhas li.sem-estoque { border-color: var(--crit); background: var(--crit-bg); }
+.linha-erro { color: var(--crit); font-size: 12px; font-weight: 600; }
+.loja-acao > .btn.esgotado { cursor: not-allowed; opacity: .6; }
 .ped-linhas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .ped-linhas:empty::before { content: "Seu carrinho está vazio. Escolha os materiais e toque em Adicionar."; color: var(--muted); font-size: 13px; }
 .ped-linhas li { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); font-size: 14px; }
@@ -706,7 +709,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         </div>
         <p class="muted" id="ped-setor-info">Setor: —</p>
         <ul class="ped-linhas" id="ped-linhas"></ul>
-        <p class="carrinho-aviso" id="carrinho-aviso" hidden>Itens em falta podem demorar ou ser reprovados. O almoxarifado avisa na análise.</p>
+        <p class="carrinho-aviso" id="carrinho-aviso" hidden>Há itens em falta no carrinho. Tire-os para conseguir enviar o pedido.</p>
         <p class="carrinho-aviso info" id="carrinho-aviso-extra" hidden>Material fora do catálogo precisa ser comprado. O almoxarifado avisa na análise se vai atender.</p>
         <details class="extra" id="extra-box">
           <summary>Não encontrou o que precisa?</summary>
@@ -859,7 +862,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     me: null, itens: [], itensLoaded: false, movs: [], perfis: {}, tab: "estoque", relSeq: 0,
     sel: new Set(), confirmarMassa: false, detalheId: null, atualizarDetalhe: false, timer: null,
     pedidos: [], pedidosLoaded: false, catalogo: [], pedLinhas: [], pedConfirm: {},
-    pedModo: "loja", lojaCat: "", pedExtras: [],
+    pedModo: "loja", lojaCat: "", pedExtras: [], pedSemEstoque: new Set(),
   };
   const podeEditar = () => state.me && (state.me.papel === "admin" || state.me.papel === "operador");
   const ehAdmin = () => state.me && state.me.papel === "admin";
@@ -937,6 +940,12 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     if (excluido) return "O item " + excluido[1] + " foi excluído do estoque. Cadastre de novo com exatamente o mesmo nome e registre a entrega outra vez.";
     if (/sem_setor/.test(txt)) return "Seu usuário não tem setor definido. Peça ao administrador para definir na aba Pessoas.";
     if (/pedido_vazio/.test(txt)) return "Adicione pelo menos um item ao pedido.";
+    const semEstoque = txt.match(/sem_estoque: (.+)/);
+    if (semEstoque) {
+      const nomes = semEstoque[1].split(" | ");
+      return "Não há estoque suficiente de " + (nomes.length > 1 ? nomes.slice(0, -1).join(", ") + " e " + nomes[nomes.length - 1] : nomes[0])
+        + " para a quantidade pedida. Diminua a quantidade ou tire do carrinho.";
+    }
     if (/pedido_grande/.test(txt)) return "O pedido passou de 100 itens. Divida em dois pedidos.";
     if (/nome_invalido/.test(txt)) return "Escreva o nome do material fora do catálogo (até 120 letras).";
     if (/pedido_nao_pendente/.test(txt)) return "Este pedido já foi analisado ou cancelado. Atualize a página.";
@@ -1700,6 +1709,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       else state.pedExtras = state.pedExtras.filter((e) => e.id !== id);
     } else {
       const linha = linhaCarrinho(id);
+      const it = itemCatalogo(id);
+      if (it) state.pedSemEstoque.delete(it.nome); // o banco confere de novo ao enviar
       if (qtd > 0 && linha) linha.qtd = qtd;
       else if (qtd > 0) state.pedLinhas.push({ item_id: id, qtd });
       else state.pedLinhas = state.pedLinhas.filter((l) => l.item_id !== id);
@@ -1746,15 +1757,17 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       h("h4", { text: it.nome }),
       h("div", { class: "item-sub", text: (it.categoria || "Outros") + " · " + (it.unidade || "un") }),
       h("div", { class: "loja-acao" }, linha ? stepper(it, linha, "g")
+        : it.disponibilidade === "falta" ? h("button", { class: "btn esgotado", type: "button", disabled: true }, "Sem estoque")
         : h("button", { class: "btn", type: "button", "data-foco": "g+" + it.id, "aria-label": "Adicionar " + it.nome + " ao carrinho", onclick: () => mudarQtd(it.id, 1) }, "+ Adicionar")));
   }
   function renderCarrinho() {
     const linhas = state.pedLinhas.map((l) => ({ l, it: itemCatalogo(l.item_id) })).filter((x) => x.it);
-    $("#ped-linhas").replaceChildren(...linhas.map(({ l, it }) => h("li", null,
+    $("#ped-linhas").replaceChildren(...linhas.map(({ l, it }) => h("li", { class: state.pedSemEstoque.has(it.nome) ? "sem-estoque" : null },
       h("div", { class: "linha-topo" },
         h("span", { class: "item-name", text: it.nome }),
         h("button", { class: "x", type: "button", "aria-label": "Tirar " + it.nome + " do carrinho", onclick: () => mudarQtd(it.id, 0) }, "×")),
-      h("div", { class: "linha-qtd" }, stepper(it, l, "c"), h("span", { class: "disp " + it.disponibilidade, text: DISP[it.disponibilidade] || "" })))),
+      h("div", { class: "linha-qtd" }, stepper(it, l, "c"), h("span", { class: "disp " + it.disponibilidade, text: DISP[it.disponibilidade] || "" })),
+      state.pedSemEstoque.has(it.nome) ? h("small", { class: "linha-erro", text: "Não há estoque para essa quantidade." }) : null)),
       ...state.pedExtras.map((e) => h("li", { class: "fora" },
         h("div", { class: "linha-topo" },
           h("span", { class: "item-name", text: e.nome }),
@@ -1830,7 +1843,14 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       ];
       try {
         criado = await q(sb.rpc("criar_pedido", { p_itens: itens, p_obs: $("#ped-obs").value.trim() || null }));
-      } catch (err) { erro.textContent = msgErro(err); erro.hidden = false; return; }
+      } catch (err) {
+        // marca no carrinho as linhas que passaram do estoque
+        const sem = String((err && (err.message || err.details)) || "").match(/sem_estoque: (.+)/);
+        state.pedSemEstoque = new Set(sem ? sem[1].split(" | ") : []);
+        if (sem) renderLoja();
+        erro.textContent = msgErro(err); erro.hidden = false; return;
+      }
+      state.pedSemEstoque = new Set();
       confete($("#ped-enviar"));
       state.pedLinhas = [];
       state.pedExtras = [];
