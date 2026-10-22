@@ -349,6 +349,13 @@ td.sel { cursor: default; }
 .ped-etapas li.atual small { color: var(--warn); }
 .ped-etapas li.ruim .dot { background: var(--crit); border-color: var(--crit); }
 .ped-etapas li.ruim b { color: var(--crit); }
+.ped-etapas li[tabindex] { cursor: help; border-radius: 6px; }
+.ped-etapas li[tabindex]:focus { outline: none; }
+.ped-etapas li[tabindex]:focus-visible b { text-decoration: underline; }
+.ped-etapas .dica { position: absolute; top: calc(100% + 6px); left: -4px; z-index: 3; width: max-content; max-width: 220px; padding: 6px 10px; border-radius: 8px; background: var(--ink); color: var(--bg); font-size: 12px; font-weight: 600; line-height: 1.35; box-shadow: var(--shadow); opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity .15s, transform .15s; }
+.ped-etapas li:last-child .dica { left: auto; right: 0; }
+.ped-etapas li:hover .dica, .ped-etapas li:focus .dica { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .ped-etapas .dica { transition: none; } }
 .ped-obs { margin: 0; font-size: 14px; padding: 8px 12px; border-left: 3px solid var(--line); color: var(--muted); }
 .ped-itens td, .ped-itens th { padding: 8px 10px; font-size: 14px; }
 .ped-itens td { vertical-align: top; }
@@ -1878,19 +1885,23 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   // para quem pede: etapas do pedido com data, sem os nomes de quem analisou ou entregou
   const fmtCurto = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
   function linhaDoTempo(p) {
-    const etapas = [{ rot: "Enviado", quando: p.criado_em }];
+    const etapas = [{ rot: "Enviado", quando: p.criado_em, quem: p.solicitante && "Enviado por " + nomeDe(p.solicitante) }];
     if (p.status === "cancelado") etapas.push({ rot: "Cancelado", quando: p.cancelado_em, ruim: true });
     else {
       const res = { parcial: "Aprovado em parte", reprovado: "Reprovado" }[p.status] || "Aprovado";
-      etapas.push({ rot: p.analisado_em ? res : "Análise", quando: p.analisado_em, ruim: p.status === "reprovado", espera: "aguardando o almoxarifado" });
-      if (p.status !== "reprovado") etapas.push({ rot: "Entregue", quando: p.entregue_em, espera: "separando o material" });
+      etapas.push({ rot: p.analisado_em ? res : "Análise", quando: p.analisado_em, ruim: p.status === "reprovado", espera: "aguardando o almoxarifado",
+        quem: p.analisado_por && (p.status === "reprovado" ? "Reprovado" : "Aprovado") + " por " + nomeDe(p.analisado_por) });
+      if (p.status !== "reprovado") etapas.push({ rot: "Entregue", quando: p.entregue_em, espera: "separando o material", quem: p.entregue_por && "Entregue por " + nomeDe(p.entregue_por) });
     }
+    // passar o mouse (ou tocar, no celular) numa etapa concluída mostra quem fez
     return h("ol", { class: "ped-etapas", "aria-label": "Andamento do pedido" }, etapas.map((e, i) => {
       const feito = !!e.quando, atual = !feito && !!etapas[i - 1].quando;
-      return h("li", { class: [feito && "feito", atual && "atual", e.ruim && "ruim"].filter(Boolean).join(" ") },
+      const dica = feito && e.quem ? e.quem : null;
+      return h("li", { class: [feito && "feito", atual && "atual", e.ruim && "ruim"].filter(Boolean).join(" "), tabindex: dica ? "0" : null },
         h("span", { class: "dot", "aria-hidden": "true" }),
         h("b", { text: e.rot }),
-        h("small", { text: feito ? fmtCurto(e.quando) : atual ? e.espera : "" }));
+        h("small", { text: feito ? fmtCurto(e.quando) : atual ? e.espera : "" }),
+        dica ? h("span", { class: "dica", role: "tooltip", text: dica }) : null);
     }));
   }
 
