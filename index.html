@@ -333,6 +333,22 @@ td.sel { cursor: default; }
 .ped-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .ped-head b { font-family: var(--f-display); font-size: 17px; }
 .ped-meta { font-size: 13px; color: var(--muted); }
+/* andamento do pedido (visão de quem pede): Enviado → Aprovado → Entregue */
+.ped-etapas { list-style: none; margin: 2px 0 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.ped-etapas li { position: relative; display: flex; flex-direction: column; gap: 1px; padding: 22px 8px 0 0; min-width: 0; font-size: 13px; color: var(--muted); }
+.ped-etapas li::after { content: ""; position: absolute; top: 6px; left: 18px; right: 4px; height: 2px; border-radius: 2px; background: var(--line); }
+.ped-etapas li:last-child::after { display: none; }
+.ped-etapas li.feito::after { background: var(--ok); }
+.ped-etapas .dot { position: absolute; top: 0; left: 0; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); }
+.ped-etapas b { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.ped-etapas small { font-size: 12px; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.ped-etapas li.atual small { font-family: inherit; }
+.ped-etapas li.feito, .ped-etapas li.atual { color: var(--ink); }
+.ped-etapas li.feito .dot { background: var(--ok); border-color: var(--ok); }
+.ped-etapas li.atual .dot { border-color: var(--warn); box-shadow: 0 0 0 4px var(--warn-bg); }
+.ped-etapas li.atual small { color: var(--warn); }
+.ped-etapas li.ruim .dot { background: var(--crit); border-color: var(--crit); }
+.ped-etapas li.ruim b { color: var(--crit); }
 .ped-obs { margin: 0; font-size: 14px; padding: 8px 12px; border-left: 3px solid var(--line); color: var(--muted); }
 .ped-itens td, .ped-itens th { padding: 8px 10px; font-size: 14px; }
 .ped-itens td { vertical-align: top; }
@@ -1859,6 +1875,25 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     alvo.replaceChildren(...lista.map(cardPedido));
   }
 
+  // para quem pede: etapas do pedido com data, sem os nomes de quem analisou ou entregou
+  const fmtCurto = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
+  function linhaDoTempo(p) {
+    const etapas = [{ rot: "Enviado", quando: p.criado_em }];
+    if (p.status === "cancelado") etapas.push({ rot: "Cancelado", quando: p.cancelado_em, ruim: true });
+    else {
+      const res = { parcial: "Aprovado em parte", reprovado: "Reprovado" }[p.status] || "Aprovado";
+      etapas.push({ rot: p.analisado_em ? res : "Análise", quando: p.analisado_em, ruim: p.status === "reprovado", espera: "aguardando o almoxarifado" });
+      if (p.status !== "reprovado") etapas.push({ rot: "Entregue", quando: p.entregue_em, espera: "separando o material" });
+    }
+    return h("ol", { class: "ped-etapas", "aria-label": "Andamento do pedido" }, etapas.map((e, i) => {
+      const feito = !!e.quando, atual = !feito && !!etapas[i - 1].quando;
+      return h("li", { class: [feito && "feito", atual && "atual", e.ruim && "ruim"].filter(Boolean).join(" ") },
+        h("span", { class: "dot", "aria-hidden": "true" }),
+        h("b", { text: e.rot }),
+        h("small", { text: feito ? fmtCurto(e.quando) : atual ? e.espera : "" }));
+    }));
+  }
+
   function cardPedido(p) {
     const [rot, cls] = STATUS_PED[p.status] || [p.status, "adj"];
     const itens = (p.pedido_itens || []).slice().sort((a, b) => a.item_nome.localeCompare(b.item_nome, "pt-BR"));
@@ -1973,7 +2008,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         h("b", { text: "Pedido nº " + p.numero }),
         h("span", { class: "pill forte " + cls, text: rot }),
         h("span", { class: "pill adj", text: p.setor })),
-      h("div", { class: "ped-meta", text: historico }),
+      ehSolicitante() ? linhaDoTempo(p) : h("div", { class: "ped-meta", text: historico }),
       p.obs ? h("p", { class: "ped-obs", text: p.obs }) : null,
       h("div", { class: "table-wrap" }, h("table", { class: "ped-itens" },
         h("thead", null, h("tr", null, h("th", { text: "Item" }), h("th", { class: "r", text: "Pedido" }), h("th", { text: analisa ? "Decisão" : "Resultado" }))),
