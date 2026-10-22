@@ -714,7 +714,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         <details class="extra" id="extra-box">
           <summary>Não encontrou o que precisa?</summary>
           <div class="extra-form">
-            <div class="field"><label for="extra-nome">Material</label><input id="extra-nome" maxlength="120" autocomplete="off" placeholder="Ex.: grampeador de mesa"></div>
+            <div class="field"><label for="extra-nome">Material</label><input id="extra-nome" maxlength="120" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ex.: GRAMPEADOR DE MESA"></div>
             <div class="extra-linha">
               <div class="field"><label for="extra-qtd">Quantidade</label><input id="extra-qtd" type="number" min="0" step="any" inputmode="decimal" value="1"></div>
               <div class="field"><label for="extra-un">Unidade</label><select id="extra-un"></select></div>
@@ -1807,7 +1807,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   function adicionarExtra() {
     const erro = $("#extra-erro");
     erro.hidden = true;
-    const nome = $("#extra-nome").value.replace(/\s+/g, " ").trim();
+    const nome = $("#extra-nome").value.replace(/\s+/g, " ").trim().toLocaleUpperCase("pt-BR");
     const qtd = round(parseFloat($("#extra-qtd").value));
     const unidade = $("#extra-un").value || "un";
     if (!nome) { erro.textContent = "Escreva o nome do material."; erro.hidden = false; $("#extra-nome").focus(); return; }
@@ -1823,6 +1823,14 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     $("#extra-nome").focus();
   }
   $("#extra-add").addEventListener("click", adicionarExtra);
+  // nome do material sempre em maiúsculas, já enquanto digita (mantém o cursor no lugar)
+  $("#extra-nome").addEventListener("input", (e) => {
+    const inp = e.target, maiusc = inp.value.toLocaleUpperCase("pt-BR");
+    if (maiusc === inp.value) return;
+    const ini = inp.selectionStart, fim = inp.selectionEnd;
+    inp.value = maiusc;
+    inp.setSelectionRange(ini, fim);
+  });
   for (const id of ["#extra-nome", "#extra-qtd"]) {
     $(id).addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); adicionarExtra(); } });
   }
