@@ -264,7 +264,16 @@ td.sel { cursor: default; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
 .seg .count, .carrinho-head .count { font-family: var(--f-mono); font-size: 12px; background: var(--warn-bg); color: var(--warn); border-radius: 99px; padding: 0 7px; }
 /* Vitrine: um cartão por material, como numa loja */
-.loja { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 16px; align-items: start; }
+.loja { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ped-modo svg { width: 16px; height: 16px; flex: none; }
+/* Carrinho em tela própria: lista à esquerda, resumo e "Fechar pedido" à direita */
+.carrinho-pagina { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 340px); gap: 16px; align-items: start; }
+.carrinho-lista { padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.resumo { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 14px; }
+.resumo dt { color: var(--muted); }
+.resumo dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
+.resumo-nota { margin: 0; font-size: 12px; text-align: center; }
+#ped-enviar { padding-block: 12px; font-size: 15px; }
 .loja-vitrine { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .loja-cats { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
 .loja-cats:empty { display: none; }
@@ -299,10 +308,11 @@ td.sel { cursor: default; }
 .carrinho-aviso { margin: 0; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: var(--crit-bg); color: var(--crit); }
 .carrinho-aviso.info { background: var(--accent-soft); color: var(--accent); }
 /* pedido de material que não está no catálogo */
-.extra { border: 1px dashed var(--line); border-radius: 10px; padding: 0 12px; }
-.extra[open] { padding-bottom: 12px; }
-.extra summary { cursor: pointer; padding: 10px 0; font-size: 14px; font-weight: 600; color: var(--accent); }
-.extra-form { display: flex; flex-direction: column; gap: 10px; }
+.extra { border-style: dashed; padding: 0 16px; box-shadow: none; }
+.extra[open] { padding-bottom: 16px; }
+.extra summary { cursor: pointer; padding: 14px 0; font-size: 14px; font-weight: 600; color: var(--accent); }
+.extra-form { display: flex; flex-direction: column; gap: 10px; max-width: 520px; }
+.extra-form .btn { align-self: flex-start; }
 .extra-linha { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 8px; }
 .disp.fora, .pill.fora { color: var(--accent); }
 .pill.fora { background: var(--accent-soft); margin-left: 6px; vertical-align: 1px; }
@@ -311,16 +321,17 @@ td.sel { cursor: default; }
 .linha-erro { color: var(--crit); font-size: 12px; font-weight: 600; }
 .loja-acao > .btn.esgotado { cursor: not-allowed; opacity: .6; }
 .ped-linhas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.ped-linhas:empty::before { content: "Seu carrinho está vazio. Escolha os materiais e toque em Adicionar."; color: var(--muted); font-size: 13px; }
-.ped-linhas li { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); font-size: 14px; }
-.linha-topo { display: flex; align-items: flex-start; gap: 8px; }
-.linha-topo .item-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-.linha-topo .x { padding: 0 6px; font-size: 20px; }
-.linha-qtd { display: flex; align-items: center; gap: 10px; }
-.linha-qtd .stepper { flex: 0 0 150px; }
-.linha-qtd .stepper button, .linha-qtd .stepper input { height: 30px; }
-.linha-qtd .stepper button { width: 30px; }
-.carrinho-barra { display: none; }
+.ped-linhas:empty::before { content: "Seu carrinho está vazio. Volte em Fazer pedido e escolha os materiais."; color: var(--muted); font-size: 14px; padding: 20px 0; text-align: center; }
+/* linha do carrinho: sigla, nome e situação, quantidade, remover */
+.ped-linhas li { display: grid; grid-template-columns: 44px minmax(0, 1fr) 170px auto; grid-template-areas: "tile info qtd x"; align-items: center; gap: 4px 14px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); font-size: 14px; }
+.ped-linhas .loja-tile { grid-area: tile; }
+.linha-info { grid-area: info; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.linha-info .item-name { overflow-wrap: anywhere; }
+.ped-linhas .stepper { grid-area: qtd; }
+.ped-linhas li > .x { grid-area: x; font-size: 22px; }
+.carrinho-barra { position: fixed; left: 50%; transform: translateX(-50%); width: min(1088px, calc(100% - 32px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 6; display: flex; align-items: center; gap: 10px; padding: 13px 18px; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 14px; cursor: pointer; box-shadow: var(--shadow-lg); }
+.carrinho-barra svg { width: 20px; height: 20px; flex: none; }
+#p-pedidos { padding-bottom: 72px; }
 .pedidos-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .ped-lista { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ped-cards { display: flex; flex-direction: column; gap: 12px; }
@@ -450,13 +461,16 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
 .toast.erro { background: var(--crit); color: var(--surface); }
 
 @media (max-width: 760px) {
-  .mov-grid, .pessoas-grid, .loja { grid-template-columns: minmax(0, 1fr); }
-  .carrinho { position: static; max-height: none; overflow: visible; scroll-margin-top: 76px; }
+  .mov-grid, .pessoas-grid, .carrinho-pagina { grid-template-columns: minmax(0, 1fr); }
+  .carrinho { position: static; max-height: none; overflow: visible; }
   .loja-grade { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-  /* no celular o carrinho fica embaixo; esta barra mostra quanto já tem e leva até ele */
-  .carrinho-barra { position: fixed; left: 16px; right: 16px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 6; display: flex; align-items: center; gap: 10px; padding: 13px 16px; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 14px; cursor: pointer; box-shadow: var(--shadow-lg); }
-  .carrinho-barra svg { width: 20px; height: 20px; flex: none; }
-  #p-pedidos { padding-bottom: 72px; }
+  .ped-linhas li { grid-template-columns: 40px minmax(0, 1fr) auto; grid-template-areas: "tile info x" "tile qtd qtd"; }
+  .ped-linhas .stepper { justify-self: start; width: 170px; }
+  .carrinho-head { flex-wrap: wrap; }
+}
+@media (max-width: 640px) {
+  .ped-modo { display: flex; align-self: stretch; }
+  .ped-modo button { flex: 1 1 0; justify-content: center; padding: 7px 6px; font-size: 13px; white-space: nowrap; }
   .hide-sm { display: none; }
   td, th { padding: 10px; }
 }
@@ -693,29 +707,21 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   <section class="panel" id="p-pedidos" role="tabpanel" aria-labelledby="t-pedidos" hidden>
     <div class="seg ped-modo" id="ped-modo" role="group" aria-label="Pedidos">
       <button type="button" data-modo="loja" aria-pressed="true">Fazer pedido</button>
+      <button type="button" data-modo="carrinho" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a1 1 0 0 0 1 .8h9.7a1 1 0 0 0 1-.8L21 7H6"/></svg>
+        Carrinho <span class="count num" id="ped-modo-carrinho" hidden></span></button>
       <button type="button" data-modo="lista" aria-pressed="false"><span id="ped-modo-lista">Meus pedidos</span> <span class="count" id="ped-modo-count" hidden></span></button>
     </div>
-    <!-- vitrine de materiais + carrinho -->
+    <!-- 1. vitrine: escolhe os materiais (como uma loja) -->
     <div class="loja" id="ped-loja">
-      <div class="loja-vitrine">
-        <div class="toolbar">
-          <input class="grow" id="loja-busca" type="search" placeholder="Buscar material" aria-label="Buscar material" autocomplete="off">
-          <button class="btn" type="button" id="loja-pdf" title="Lista para a equipe anotar quantidade e quem precisa">Lista em PDF</button>
-        </div>
-        <div class="loja-cats" id="loja-cats" role="group" aria-label="Filtrar por categoria"></div>
-        <div class="loja-grade" id="loja-grade"></div>
+      <div class="toolbar">
+        <input class="grow" id="loja-busca" type="search" placeholder="Buscar material" aria-label="Buscar material" autocomplete="off">
+        <button class="btn" type="button" id="loja-pdf" title="Lista para a equipe anotar quantidade e quem precisa">Lista em PDF</button>
       </div>
-      <form class="card carrinho" id="ped-form" novalidate>
-        <div class="carrinho-head">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a1 1 0 0 0 1 .8h9.7a1 1 0 0 0 1-.8L21 7H6"/></svg>
-          <h3>Carrinho</h3><span class="count num" id="carrinho-qtd">0</span>
-        </div>
-        <p class="muted" id="ped-setor-info">Setor: —</p>
-        <ul class="ped-linhas" id="ped-linhas"></ul>
-        <p class="carrinho-aviso" id="carrinho-aviso" hidden>Há itens em falta no carrinho. Tire-os para conseguir enviar o pedido.</p>
-        <p class="carrinho-aviso info" id="carrinho-aviso-extra" hidden>Material fora do catálogo precisa ser comprado. O almoxarifado avisa na análise se vai atender.</p>
-        <details class="extra" id="extra-box">
-          <summary>Não encontrou o que precisa?</summary>
+      <div class="loja-cats" id="loja-cats" role="group" aria-label="Filtrar por categoria"></div>
+      <div class="loja-grade" id="loja-grade"></div>
+      <details class="card extra" id="extra-box">
+        <summary>Não encontrou o que precisa? Peça um material fora do catálogo</summary>
           <div class="extra-form">
             <div class="field"><label for="extra-nome">Material</label><input id="extra-nome" maxlength="120" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Ex.: GRAMPEADOR DE MESA"></div>
             <div class="extra-linha">
@@ -725,15 +731,37 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
             <p class="form-error" id="extra-erro" hidden></p>
             <button class="btn" type="button" id="extra-add">Adicionar ao carrinho</button>
           </div>
-        </details>
+      </details>
+    </div>
+    <!-- 2. carrinho: confere as quantidades e fecha o pedido -->
+    <div class="carrinho-pagina" id="ped-carrinho" hidden>
+      <div class="card carrinho-lista">
+        <div class="carrinho-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a1 1 0 0 0 1 .8h9.7a1 1 0 0 0 1-.8L21 7H6"/></svg>
+          <h3>Carrinho</h3><span class="count num" id="carrinho-qtd">0</span>
+          <span class="spacer"></span>
+          <button class="btn small" type="button" id="carrinho-voltar">← Continuar escolhendo</button>
+        </div>
+        <ul class="ped-linhas" id="ped-linhas"></ul>
+        <p class="carrinho-aviso" id="carrinho-aviso" hidden>Há itens em falta no carrinho. Tire-os para conseguir fechar o pedido.</p>
+        <p class="carrinho-aviso info" id="carrinho-aviso-extra" hidden>Material fora do catálogo precisa ser comprado. O almoxarifado avisa na análise se vai atender.</p>
+      </div>
+      <form class="card carrinho" id="ped-form" novalidate>
+        <h3>Resumo do pedido</h3>
+        <dl class="resumo">
+          <dt>Setor</dt><dd id="ped-setor-info">—</dd>
+          <dt>Materiais</dt><dd id="resumo-qtd" class="num">0</dd>
+          <dt id="resumo-fora-rot" hidden>Fora do catálogo</dt><dd id="resumo-fora" class="num" hidden>0</dd>
+        </dl>
         <div class="field"><label for="ped-obs">Observação (opcional)</label><input id="ped-obs" autocomplete="off" placeholder="Ex.: material para o novo funcionário"></div>
         <p class="form-error" id="ped-erro" hidden></p>
-        <button class="btn primary" type="submit" id="ped-enviar">Enviar pedido</button>
+        <button class="btn primary" type="submit" id="ped-enviar">Fechar pedido</button>
+        <p class="muted resumo-nota">O almoxarifado analisa e você acompanha em Meus pedidos.</p>
       </form>
     </div>
     <button class="carrinho-barra" id="carrinho-barra" type="button" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a1 1 0 0 0 1 .8h9.7a1 1 0 0 0 1-.8L21 7H6"/></svg>
-      <span id="carrinho-barra-txt"></span><span class="spacer"></span>Ver carrinho →
+      <span id="carrinho-barra-txt"></span><span class="spacer"></span>Ir para o carrinho →
     </button>
     <div class="pedidos-grid" id="ped-grid">
       <div class="ped-lista" id="ped-lista">
@@ -1761,27 +1789,46 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       h("div", { class: "item-sub", text: (it.categoria || "Outros") + " · " + (it.unidade || "un") }),
       h("div", { class: "loja-acao" }, linha ? stepper(it, linha, "g")
         : it.disponibilidade === "falta" ? h("button", { class: "btn esgotado", type: "button", disabled: true }, "Sem estoque")
-        : h("button", { class: "btn", type: "button", "data-foco": "g+" + it.id, "aria-label": "Adicionar " + it.nome + " ao carrinho", onclick: () => mudarQtd(it.id, 1) }, "+ Adicionar")));
+        : h("button", { class: "btn", type: "button", "data-foco": "g+" + it.id, "aria-label": "Adicionar " + it.nome + " ao carrinho",
+          onclick: () => { mudarQtd(it.id, 1); toast(it.nome + " foi para o carrinho."); } }, "+ Adicionar")));
+  }
+  // uma linha do carrinho: sigla, nome e situação, quantidade e o botão de tirar
+  function linhaDoCarrinho(it, linha, situacao, classe, erro) {
+    return h("li", { class: classe },
+      h("span", { class: "loja-tile", "aria-hidden": "true", text: sigla(it.nome) }),
+      h("div", { class: "linha-info" },
+        h("span", { class: "item-name", text: it.nome }),
+        situacao,
+        erro ? h("small", { class: "linha-erro", text: erro }) : null),
+      stepper(it, linha, "c"),
+      h("button", { class: "x", type: "button", "aria-label": "Tirar " + it.nome + " do carrinho", onclick: () => mudarQtd(it.id, 0) }, "×"));
   }
   function renderCarrinho() {
     const linhas = state.pedLinhas.map((l) => ({ l, it: itemCatalogo(l.item_id) })).filter((x) => x.it);
-    $("#ped-linhas").replaceChildren(...linhas.map(({ l, it }) => h("li", { class: state.pedSemEstoque.has(it.nome) ? "sem-estoque" : null },
-      h("div", { class: "linha-topo" },
-        h("span", { class: "item-name", text: it.nome }),
-        h("button", { class: "x", type: "button", "aria-label": "Tirar " + it.nome + " do carrinho", onclick: () => mudarQtd(it.id, 0) }, "×")),
-      h("div", { class: "linha-qtd" }, stepper(it, l, "c"), h("span", { class: "disp " + it.disponibilidade, text: DISP[it.disponibilidade] || "" })),
-      state.pedSemEstoque.has(it.nome) ? h("small", { class: "linha-erro", text: "Não há estoque para essa quantidade." }) : null)),
-      ...state.pedExtras.map((e) => h("li", { class: "fora" },
-        h("div", { class: "linha-topo" },
-          h("span", { class: "item-name", text: e.nome }),
-          h("button", { class: "x", type: "button", "aria-label": "Tirar " + e.nome + " do carrinho", onclick: () => mudarQtd(e.id, 0) }, "×")),
-        h("div", { class: "linha-qtd" }, stepper(e, e, "c"), h("span", { class: "disp fora", text: "Fora do catálogo" })))));
+    $("#ped-linhas").replaceChildren(
+      ...linhas.map(({ l, it }) => {
+        const sem = state.pedSemEstoque.has(it.nome);
+        return linhaDoCarrinho(it, l, h("span", { class: "disp " + it.disponibilidade, text: DISP[it.disponibilidade] || "" }),
+          sem ? "sem-estoque" : null, sem ? "Não há estoque para essa quantidade." : null);
+      }),
+      ...state.pedExtras.map((e) => linhaDoCarrinho(e, e, h("span", { class: "disp fora", text: "Fora do catálogo" }), "fora")));
     const n = linhas.length + state.pedExtras.length;
     $("#carrinho-qtd").textContent = n;
+    $("#ped-modo-carrinho").textContent = n;
+    $("#ped-modo-carrinho").hidden = !n;
+    $("#resumo-qtd").textContent = linhas.length;
+    $("#resumo-fora").textContent = state.pedExtras.length;
+    $("#resumo-fora").hidden = $("#resumo-fora-rot").hidden = !state.pedExtras.length;
     $("#carrinho-aviso").hidden = !linhas.some(({ it }) => it.disponibilidade === "falta");
     $("#carrinho-aviso-extra").hidden = !state.pedExtras.length;
+    // na vitrine, a barra mostra quanto já tem e leva ao carrinho
     $("#carrinho-barra").hidden = !n || $("#ped-loja").hidden;
     $("#carrinho-barra-txt").textContent = n + (n === 1 ? " material no carrinho" : " materiais no carrinho");
+  }
+  function irParaModo(modo) {
+    state.pedModo = modo;
+    renderPedidos();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
   function renderLoja() {
     const foco = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.foco : null;
@@ -1841,8 +1888,9 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   for (const id of ["#extra-nome", "#extra-qtd"]) {
     $(id).addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); adicionarExtra(); } });
   }
-  document.querySelectorAll("#ped-modo button").forEach((b) => b.addEventListener("click", () => { state.pedModo = b.dataset.modo; renderPedidos(); }));
-  $("#carrinho-barra").addEventListener("click", () => $("#ped-form").scrollIntoView({ behavior: "smooth", block: "start" }));
+  document.querySelectorAll("#ped-modo button").forEach((b) => b.addEventListener("click", () => irParaModo(b.dataset.modo)));
+  $("#carrinho-barra").addEventListener("click", () => irParaModo("carrinho"));
+  $("#carrinho-voltar").addEventListener("click", () => irParaModo("loja"));
 
   $("#ped-form").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -1872,6 +1920,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       salvarCarrinho();
       $("#ped-obs").value = "";
       state.pedModo = "lista";
+      renderPedidos(); // já mostra o carrinho vazio e a lista, mesmo antes de recarregar
       toast("Pedido nº " + criado.numero + " enviado. Acompanhe a aprovação em " + (ehSolicitante() ? "Meus pedidos." : "Pedidos dos setores."));
       await carregarTudo();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1889,13 +1938,14 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     const modo = pode ? state.pedModo : "lista";
     $("#ped-modo").hidden = !pode;
     $("#ped-loja").hidden = modo !== "loja";
+    $("#ped-carrinho").hidden = modo !== "carrinho";
     $("#ped-grid").hidden = modo !== "lista";
     document.querySelectorAll("#ped-modo button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.modo === modo)));
     $("#ped-modo-lista").textContent = ehSolicitante() ? "Meus pedidos" : "Pedidos dos setores";
     const abertos = state.pedidos.filter((p) => ["pendente", "aprovado", "parcial"].includes(p.status)).length;
     $("#ped-modo-count").hidden = !abertos;
     $("#ped-modo-count").textContent = abertos;
-    $("#ped-setor-info").textContent = "Pedido em nome do setor " + (meuSetor() || "—");
+    $("#ped-setor-info").textContent = meuSetor() || "—";
     $("#ped-lista-titulo").textContent = ehSolicitante() ? "Pedidos do setor " + meuSetor() : "Pedidos dos setores";
     if (pode && state.pedidosLoaded) conferirCarrinho();
     renderLoja();
@@ -1911,7 +1961,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     if (!lista.length) {
       alvo.replaceChildren(h("div", { class: "card empty" },
         h("h2", { text: state.pedidos.length ? "Nenhum pedido neste filtro" : "Nenhum pedido ainda" }),
-        h("p", { text: pode ? "Em Fazer pedido, escolha os materiais, coloque no carrinho e envie. O almoxarifado analisa e você acompanha aqui." : "Quando os setores enviarem pedidos de material, eles aparecem aqui para análise e entrega." })));
+        h("p", { text: pode ? "Em Fazer pedido, escolha os materiais e coloque no carrinho; no Carrinho, toque em Fechar pedido. O almoxarifado analisa e você acompanha aqui." : "Quando os setores enviarem pedidos de material, eles aparecem aqui para análise e entrega." })));
       return;
     }
     alvo.replaceChildren(...lista.map(cardPedido));
