@@ -163,6 +163,7 @@ section.panel { padding-block: 20px 0; display: flex; flex-direction: column; ga
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .field small { font-size: 12px; color: var(--muted); }
+.field small.aviso-emb { color: var(--accent); background: var(--accent-soft); padding: 6px 8px; border-radius: 8px; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .toolbar .grow { flex: 1 1 220px; min-width: 0; }
 .toolbar select { width: auto; }
@@ -941,6 +942,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   // embalagem de compra (ex.: caixa com 50 un); o estoque é sempre contado na unidade do item
   const EMBALAGENS = [["", "Não se aplica"], ["caixa", "Caixa"], ["pacote", "Pacote"], ["fardo", "Fardo"], ["resma", "Resma"], ["rolo", "Rolo"], ["bloco", "Bloco"]];
   const temEmbalagem = (it) => !!(it && it.embalagem && num(it.qtd_embalagem) > 1);
+  // unidade do item que tem o mesmo nome de uma embalagem (item que sai do armário em caixa, pacote…)
+  const UN_EMB = { cx: "caixa", pct: "pacote", fardo: "fardo", resma: "resma", rolo: "rolo", bloco: "bloco" };
   const nomeEmb = (it, n) => {
     const base = ((EMBALAGENS.find(([v]) => v === it.embalagem) || [it.embalagem, it.embalagem])[1] || "").toLowerCase();
     return n === 1 ? base : base + "s";
@@ -2377,19 +2380,32 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     un.value = unAtual;
     const campoUn = h("div", { class: "field" },
       h("label", { for: "i-un", text: "Unidade (como o item é contado)" }), un,
-      h("small", { text: "Ex.: caneta por unidade, clipes por caixa, papel por resma. A quantidade vai em Estoque mínimo e nas entradas." }));
+      h("small", { text: "Como o item sai do armário: caneta por unidade, clipes por caixa (a caixa inteira), papel por resma. A quantidade vai em Estoque mínimo e nas entradas." }));
     const min = h("input", { id: "i-min", type: "number", min: "0", step: "any", value: item ? num(item.minimo) : "", inputmode: "decimal" });
     const emb = h("select", { id: "i-emb" }, EMBALAGENS.map(([v, rot]) => h("option", { value: v }, rot)));
     emb.value = item && item.embalagem ? item.embalagem : "";
     const qtdEmb = h("input", { id: "i-qemb", class: "curto", type: "number", min: "1", step: "any", inputmode: "decimal", placeholder: "Ex.: 50", value: item && item.qtd_embalagem ? num(item.qtd_embalagem) : "" });
     const unEmb = h("span", { class: "muted" });
-    const sincUnEmb = () => { unEmb.textContent = un.value || "un"; };
+    const avisoEmb = h("small", { class: "aviso-emb", hidden: true });
+    // a embalagem de compra tem de ser maior que a unidade: item que sai em caixa não é "comprado em caixa"
+    const sincUnEmb = () => {
+      unEmb.textContent = un.value || "un";
+      const igual = UN_EMB[un.value];
+      for (const o of emb.options) o.disabled = o.hidden = !!igual && o.value === igual;
+      if (igual && emb.value === igual) {
+        emb.value = "";
+        qtdEmb.value = "";
+        avisoEmb.textContent = "Como o item sai do armário em " + un.options[un.selectedIndex].text.toLowerCase().replace(/ \(.*\)$/, "") + ", cada uma já conta como 1 no estoque. Use \"Como é comprado\" só se vier numa embalagem maior (ex.: pacote com 10 caixas).";
+        avisoEmb.hidden = false;
+      } else if (!igual || emb.value) avisoEmb.hidden = true;
+      sincEmb();
+    };
     un.addEventListener("change", sincUnEmb);
-    sincUnEmb();
     const campoEmb = h("div", { class: "field", style: "grid-column: 1 / -1" },
       h("label", { for: "i-emb", text: "Como é comprado (opcional)" }),
       h("div", { class: "inline-row" }, emb, h("span", { class: "muted", text: "com" }), qtdEmb, unEmb),
-      h("small", { text: "Ex.: caneta comprada em caixa com 50 un. Na entrada dá para lançar em caixas, e o sistema converte para unidades." }));
+      h("small", { text: "Só se a compra vem numa embalagem maior que a unidade. Ex.: caneta (un) comprada em caixa com 50 un; clipes (cx) comprados em pacote com 10 cx. Na entrada dá para lançar em embalagens, e o sistema converte." }),
+      avisoEmb);
     // com embalagem escolhida, saldo inicial e custo do cadastro são informados por embalagem
     const lblSaldo = h("label", { for: "i-saldo" }), lblCusto = h("label", { for: "i-custo" });
     const sincEmb = () => {
@@ -2398,8 +2414,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       lblSaldo.textContent = nomeE ? "Saldo atual (em " + nomeE + "s, opcional)" : "Saldo atual (opcional)";
       lblCusto.textContent = nomeE ? "Custo por " + nomeE + " (R$, opcional)" : "Custo unitário (R$, opcional)";
     };
-    emb.addEventListener("change", sincEmb);
-    sincEmb();
+    emb.addEventListener("change", () => { avisoEmb.hidden = true; sincEmb(); });
+    sincUnEmb();
     const local = h("input", { id: "i-local", list: "dl-locais", value: item ? item.local || "" : "", autocomplete: "off", placeholder: "Ex.: Armário 1" });
     const saldoIni = h("input", { id: "i-saldo", type: "number", min: "0", step: "any", inputmode: "decimal", placeholder: "0" });
     const custoIni = h("input", { id: "i-custo", type: "number", min: "0", step: "0.01", inputmode: "decimal", placeholder: "0,00" });
@@ -2419,12 +2435,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       const dados = { nome: nome.value.trim(), categoria: CATEGORIA, unidade: un.value || "un", minimo: round(parseFloat(min.value) || 0), local: local.value.trim(),
         embalagem: emb.value || null, qtd_embalagem: emb.value ? round(parseFloat(qtdEmb.value) || 0) : null };
       if (dados.embalagem && !(dados.qtd_embalagem > 1)) { erro.textContent = "Informe quantas unidades vêm em cada " + emb.options[emb.selectedIndex].text.toLowerCase() + " (mais de 1)."; erro.hidden = false; qtdEmb.focus(); return; }
-      // unidade = embalagem (ex.: unidade "Caixa" e comprado em "Caixa") não faz sentido: a unidade é como o item sai do armário
-      const MESMA = { cx: "caixa", pct: "pacote", fardo: "fardo", resma: "resma", rolo: "rolo", bloco: "bloco" };
-      if (dados.embalagem && MESMA[dados.unidade] === dados.embalagem) {
-        erro.textContent = "A unidade deve ser como o item sai do armário (ex.: Unidade (un) para canetas). A " + emb.options[emb.selectedIndex].text.toLowerCase() + " fica só em \"Como é comprado\".";
-        erro.hidden = false; un.focus(); return;
-      }
+      // unidade igual à embalagem (sai em caixa e "comprado em caixa"): cada caixa já é 1 no estoque, sem conversão
+      if (dados.embalagem && UN_EMB[dados.unidade] === dados.embalagem) { dados.embalagem = null; dados.qtd_embalagem = null; }
       if (!dados.nome) { erro.textContent = "Informe o nome do item."; erro.hidden = false; nome.focus(); return; }
       if (state.itens.some((i) => i.id !== (item && item.id) && norm(i.nome) === norm(dados.nome))) { erro.textContent = "Já existe um item com esse nome."; erro.hidden = false; return; }
       comBusy(salvar, async () => {
