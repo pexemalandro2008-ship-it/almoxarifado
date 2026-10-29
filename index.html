@@ -380,6 +380,10 @@ td.sel { cursor: default; }
 .ped-decisao input.m { flex: 1 1 140px; }
 .ped-motivo { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
 .ped-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* escolha dos itens na entrega parcial */
+.ped-entrega { flex: 1 1 100%; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; }
+.ped-entrega b { font-size: 13px; }
+.ped-entrega .check { color: var(--ink); white-space: normal; }
 .disp { font-size: 12px; font-weight: 600; }
 .disp.disponivel { color: var(--ok); }
 .disp.pouco { color: var(--warn); }
@@ -986,6 +990,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     if (/nome_invalido/.test(txt)) return "Escreva o nome do material fora do catálogo (até 120 letras).";
     if (/pedido_nao_pendente/.test(txt)) return "Este pedido já foi analisado ou cancelado. Atualize a página.";
     if (/pedido_nao_aprovado/.test(txt)) return "Este pedido não está aprovado para entrega. Atualize a página.";
+    if (/nada_para_entregar/.test(txt)) return "Esses itens já foram entregues. Atualize a página.";
     if (/analise_incompleta/.test(txt)) return "Decida todos os itens do pedido antes de salvar.";
     if (/saldo_insuficiente/.test(txt)) return "Saldo insuficiente para essa saída.";
     if (/saldo_negativo/.test(txt)) return "A contagem deixaria o saldo negativo.";
@@ -2060,6 +2065,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     const [rot] = STATUS_PED[p.status] || [p.status];
     const itens = (p.pedido_itens || []).slice().sort((a, b) => a.item_nome.localeCompare(b.item_nome, "pt-BR"));
     const resultado = (it) => it.decisao === "aprovado" ? "Aprovado " + fmtQtd(it.qtd_aprovada) + " " + it.unidade
+        + (it.entregue_em ? " · entregue " + fmtDataHora(it.entregue_em) : entregaParcial(p) ? " · a entregar" : "")
       : it.decisao === "reprovado" ? "Reprovado" : p.status === "cancelado" ? "Cancelado" : "Aguardando";
     const etapas = [["Enviado", p.criado_em, p.solicitante], ["Analisado", p.analisado_em, p.analisado_por],
       ["Entregue", p.entregue_em, p.entregue_por], ["Cancelado", p.cancelado_em, p.cancelado_por]].filter((e) => e[1]);
@@ -2082,6 +2088,11 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         h("div", { text: "Almoxarifado (entrega)" })));
   }
 
+  // itens aprovados que ainda não saíram do almoxarifado; parcial = já saiu parte e falta parte
+  const aEntregar = (p) => (p.pedido_itens || []).filter((i) => i.decisao === "aprovado" && num(i.qtd_aprovada) > 0 && !i.entregue_em)
+    .sort((a, b) => a.item_nome.localeCompare(b.item_nome, "pt-BR"));
+  const entregaParcial = (p) => p.status !== "entregue" && (p.pedido_itens || []).some((i) => i.entregue_em) && aEntregar(p).length > 0;
+
   // para quem pede: etapas do pedido com data, sem os nomes de quem analisou ou entregou
   const fmtCurto = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); };
   function linhaDoTempo(p) {
@@ -2092,7 +2103,10 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       const res = { parcial: "Aprovado em parte", reprovado: "Reprovado" }[p.status] || "Aprovado";
       etapas.push({ rot: p.analisado_em ? res : "Análise", quando: p.analisado_em, ruim: p.status === "reprovado", espera: "aguardando o almoxarifado",
         quem: p.analisado_por && (p.status === "reprovado" ? "Reprovado" : "Aprovado") + " por " + nomeDe(p.analisado_por) });
-      if (p.status !== "reprovado") etapas.push({ rot: "Entregue", quando: p.entregue_em, espera: "separando o material", quem: p.entregue_por && "Entregue por " + nomeDe(p.entregue_por) });
+      const falta = aEntregar(p).length, parcial = entregaParcial(p);
+      if (p.status !== "reprovado") etapas.push({ rot: parcial ? "Entregue em parte" : "Entregue", quando: p.entregue_em,
+        espera: parcial ? (falta === 1 ? "falta 1 item" : "faltam " + falta + " itens") : "separando o material",
+        quem: p.entregue_por && "Entregue por " + nomeDe(p.entregue_por) });
     }
     // passar o mouse (ou tocar, no celular) numa etapa concluída mostra quem fez
     return h("ol", { class: "ped-etapas", "aria-label": "Andamento do pedido" }, etapas.map((e, i) => {
@@ -2132,7 +2146,10 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
           : it.decisao === "reprovado" ? h("span", { class: "pill forte crit", text: "Reprovado" })
           : p.status === "cancelado" ? h("span", { class: "pill adj", text: "Cancelado" })
           : h("span", { class: "pill forte warn", text: "Aguardando" });
-        decisao = h("div", null, d, it.motivo ? h("span", { class: "ped-motivo", text: it.motivo }) : null);
+        // na entrega parcial, cada item aprovado mostra se já saiu ou se ainda falta
+        const ent = it.entregue_em && p.status !== "entregue" ? h("span", { class: "pill ok", text: "Entregue " + fmtCurto(it.entregue_em).slice(0, 5) })
+          : entregaParcial(p) && it.decisao === "aprovado" && !it.entregue_em ? h("span", { class: "pill warn", text: "A entregar" }) : null;
+        decisao = h("div", { class: "ped-decisao" }, d, ent, it.motivo ? h("span", { class: "ped-motivo", text: it.motivo }) : null);
       }
       const saldo = podeEditar() || state.me.papel === "consulta" ? saldoDe(it.item_id) : null;
       return h("tr", null,
@@ -2174,19 +2191,38 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     }
     if (podeEditar() && (p.status === "aprovado" || p.status === "parcial")) {
       if (confirmando === "entregar") {
-        const entregues = itens.filter((i) => i.decisao === "aprovado" && num(i.qtd_aprovada) > 0);
-        const total = entregues.filter((i) => !i.fora_catalogo).length;
-        const fora = entregues.length - total;
+        // entrega parcial: o operador desmarca o que ainda não tem para entregar (ex.: material a comprar)
+        const pendentes = aEntregar(p);
+        const marcas = pendentes.map((it) => ({ it, box: h("input", { type: "checkbox", class: "sel-box", checked: true, "aria-label": "Entregar " + it.item_nome + " agora" }) }));
+        const resumo = h("span", { class: "ped-meta" });
         const sim = h("button", { class: "btn primary small", type: "button" }, "Confirmar entrega");
+        const sincResumo = () => {
+          const sel = marcas.filter((m) => m.box.checked).map((m) => m.it);
+          const total = sel.filter((i) => !i.fora_catalogo).length, fora = sel.length - total, faltam = pendentes.length - sel.length;
+          resumo.textContent = !sel.length ? "Marque pelo menos um item para entregar."
+            : (total ? "Dar baixa de " + total + (total === 1 ? " item" : " itens") + " no estoque, como saída para " + p.setor : "Registrar a entrega para " + p.setor)
+              + (fora ? " (" + fora + (fora === 1 ? " item fora do catálogo, sem baixa)" : " itens fora do catálogo, sem baixa)") : "")
+              + (faltam ? ". " + faltam + (faltam === 1 ? " item fica" : " itens ficam") + " para depois" : "") + "?";
+          sim.disabled = !sel.length;
+          sim.textContent = faltam && sel.length ? "Confirmar entrega parcial" : "Confirmar entrega";
+        };
+        for (const m of marcas) m.box.addEventListener("change", sincResumo);
+        sincResumo();
         sim.addEventListener("click", () => comBusy(sim, async () => {
-          await q(sb.rpc("entregar_pedido", { p_pedido: p.id }));
+          const ids = marcas.filter((m) => m.box.checked).map((m) => m.it.id);
+          const r = await q(sb.rpc("entregar_pedido", { p_pedido: p.id, p_itens: ids }));
           delete state.pedConfirm[p.id];
-          toast("Pedido nº " + p.numero + " entregue. A baixa no estoque foi registrada para " + p.setor + ".");
+          const faltam = pendentes.length - ids.length;
+          toast(r && r.status === "entregue" ? "Pedido nº " + p.numero + " entregue. A baixa no estoque foi registrada para " + p.setor + "."
+            : "Entrega parcial do pedido nº " + p.numero + " registrada. " + (faltam === 1 ? "Falta 1 item." : "Faltam " + faltam + " itens."));
           await carregarTudo();
         }));
-        acoes.append(h("span", { class: "ped-meta", text: (total ? "Dar baixa de " + total + (total === 1 ? " item" : " itens") + " no estoque, como saída para " + p.setor : "Registrar a entrega para " + p.setor)
-          + (fora ? " (" + fora + (fora === 1 ? " item fora do catálogo, sem baixa)" : " itens fora do catálogo, sem baixa)") : "") + "?" }), sim,
-          h("button", { class: "btn small", type: "button", onclick: voltar }, "Voltar"));
+        acoes.append(
+          h("div", { class: "ped-entrega" },
+            h("b", { text: "O que vai ser entregue agora?" }),
+            marcas.map(({ it, box }) => h("label", { class: "check" }, box,
+              it.item_nome + " — " + fmtQtd(it.qtd_aprovada) + " " + it.unidade, it.fora_catalogo ? h("span", { class: "pill fora", text: "Fora do catálogo" }) : null))),
+          resumo, sim, h("button", { class: "btn small", type: "button", onclick: voltar }, "Voltar"));
       } else {
         acoes.append(h("button", { class: "btn primary small", type: "button", onclick: () => { state.pedConfirm[p.id] = "entregar"; renderPedidos(); } }, "Registrar entrega"));
       }
@@ -2220,6 +2256,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       h("div", { class: "ped-head" },
         h("b", { text: "Pedido nº " + p.numero }),
         h("span", { class: "pill forte " + cls, text: rot }),
+        entregaParcial(p) ? h("span", { class: "pill warn", text: "Entregue em parte" }) : null,
         h("span", { class: "pill adj", text: p.setor })),
       ehSolicitante() ? linhaDoTempo(p) : h("div", { class: "ped-meta", text: historico }),
       p.obs ? h("p", { class: "ped-obs", text: p.obs }) : null,
