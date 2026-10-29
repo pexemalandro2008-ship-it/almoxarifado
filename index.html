@@ -380,6 +380,14 @@ td.sel { cursor: default; }
 .ped-decisao input.m { flex: 1 1 140px; }
 .ped-motivo { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
 .ped-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* limpar histórico de pedidos (administrador) */
+.limpar { border-color: var(--crit); border-style: dashed; padding: 0 16px; box-shadow: none; margin-top: 8px; }
+.limpar[open] { padding-bottom: 16px; }
+.limpar summary { cursor: pointer; padding: 12px 0; font-size: 14px; font-weight: 600; color: var(--crit); }
+.limpar-form { display: flex; flex-direction: column; gap: 10px; max-width: 520px; }
+.limpar-form p.muted { margin: 0; font-size: 13px; }
+.limpar-form .check { color: var(--ink); white-space: normal; }
+.limpar-form .btn { align-self: flex-start; }
 /* lembrete de entrega pendente no Estoque */
 .pendencias { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; border-color: var(--warn); border-left: 5px solid var(--warn); }
 .pend-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
@@ -793,6 +801,19 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
           </select>
         </div>
         <div class="ped-cards" id="ped-cards"></div>
+        <!-- só administrador: apagar o histórico de pedidos (ex.: depois dos testes) -->
+        <details class="card limpar so-admin" id="limpar-box">
+          <summary>Limpar histórico de pedidos</summary>
+          <div class="limpar-form">
+            <p class="muted">Apaga os pedidos e os itens deles. As entradas e saídas do estoque (aba Histórico) e os saldos não mudam. Não dá para desfazer.</p>
+            <label class="check"><input type="radio" name="limpar-quais" value="encerrados" checked> <span id="limpar-rot-enc">Só os encerrados</span></label>
+            <label class="check"><input type="radio" name="limpar-quais" value="todos"> <span id="limpar-rot-todos">Todos, inclusive os em aberto</span></label>
+            <label class="check"><input type="checkbox" id="limpar-reiniciar"> Recomeçar a numeração (o próximo pedido volta a ser o nº 1)</label>
+            <div class="field"><label for="limpar-conf">Para confirmar, digite LIMPAR</label><input id="limpar-conf" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+            <p class="form-error" id="limpar-erro" hidden></p>
+            <button class="btn danger solid" type="button" id="limpar-btn" disabled>Apagar pedidos</button>
+          </div>
+        </details>
       </div>
     </div>
   </section>
@@ -1736,6 +1757,38 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     c.textContent = n;
     renderPendencias();
   }
+
+  // ---------- limpar histórico de pedidos (administrador) ----------
+  const ENCERRADOS = ["entregue", "reprovado", "cancelado"];
+  function sincLimpar() {
+    const enc = state.pedidos.filter((p) => ENCERRADOS.includes(p.status)).length, tot = state.pedidos.length;
+    const todos = document.querySelector('input[name="limpar-quais"]:checked').value === "todos";
+    const n = todos ? tot : enc;
+    $("#limpar-rot-enc").textContent = "Só os encerrados (entregues, reprovados e cancelados): " + enc + (enc === 1 ? " pedido" : " pedidos");
+    $("#limpar-rot-todos").textContent = "Todos, inclusive os em aberto: " + tot + (tot === 1 ? " pedido" : " pedidos");
+    // a numeração só recomeça se não sobrar nenhum pedido
+    const podeReiniciar = todos || enc === tot;
+    $("#limpar-reiniciar").disabled = !podeReiniciar;
+    if (!podeReiniciar) $("#limpar-reiniciar").checked = false;
+    $("#limpar-btn").textContent = n ? "Apagar " + n + (n === 1 ? " pedido" : " pedidos") : "Nada para apagar";
+    $("#limpar-btn").disabled = !n || $("#limpar-conf").value.trim().toUpperCase() !== "LIMPAR";
+  }
+  $("#limpar-box").addEventListener("input", sincLimpar);
+  $("#limpar-box").addEventListener("toggle", () => { if ($("#limpar-box").open) sincLimpar(); });
+  $("#limpar-btn").addEventListener("click", () => {
+    const erro = $("#limpar-erro");
+    erro.hidden = true;
+    const todos = document.querySelector('input[name="limpar-quais"]:checked').value === "todos";
+    comBusy($("#limpar-btn"), async () => {
+      let n;
+      try { n = await q(sb.rpc("limpar_pedidos", { p_todos: todos, p_reiniciar: $("#limpar-reiniciar").checked })); }
+      catch (err) { erro.textContent = msgErro(err); erro.hidden = false; return; }
+      $("#limpar-conf").value = "";
+      $("#limpar-box").open = false;
+      toast(n === 1 ? "1 pedido apagado." : n + " pedidos apagados.");
+      await carregarTudo();
+    });
+  });
 
   // lembrete no Estoque: pedido entregue em parte, com o que ainda falta entregar
   function renderPendencias() {
