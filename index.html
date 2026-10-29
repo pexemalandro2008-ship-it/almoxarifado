@@ -2091,6 +2091,17 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
   // itens aprovados que ainda não saíram do almoxarifado; parcial = já saiu parte e falta parte
   const aEntregar = (p) => (p.pedido_itens || []).filter((i) => i.decisao === "aprovado" && num(i.qtd_aprovada) > 0 && !i.entregue_em)
     .sort((a, b) => a.item_nome.localeCompare(b.item_nome, "pt-BR"));
+  // quem entregou (cada entrega parcial pode ter sido feita por uma pessoa): "operador1 (29/10 10:45) e Rafael (30/10 09:10)"
+  function quemEntregou(p) {
+    const ult = new Map();
+    for (const i of p.pedido_itens || []) {
+      if (!i.entregue_em || !i.entregue_por) continue;
+      if (!ult.has(i.entregue_por) || i.entregue_em > ult.get(i.entregue_por)) ult.set(i.entregue_por, i.entregue_em);
+    }
+    if (!ult.size && p.entregue_por) ult.set(p.entregue_por, p.entregue_em);
+    const partes = [...ult].sort((a, b) => (a[1] < b[1] ? -1 : 1)).map(([uid, q]) => nomeDe(uid) + " (" + fmtCurto(q) + ")");
+    return partes.length > 1 ? partes.slice(0, -1).join(", ") + " e " + partes[partes.length - 1] : partes[0] || "";
+  }
   const entregaParcial = (p) => p.status !== "entregue" && (p.pedido_itens || []).some((i) => i.entregue_em) && aEntregar(p).length > 0;
 
   // para quem pede: etapas do pedido com data, sem os nomes de quem analisou ou entregou
@@ -2104,14 +2115,15 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       etapas.push({ rot: p.analisado_em ? res : "Análise", quando: p.analisado_em, ruim: p.status === "reprovado", espera: "aguardando o almoxarifado",
         quem: p.analisado_por && (p.status === "reprovado" ? "Reprovado" : "Aprovado") + " por " + nomeDe(p.analisado_por) });
       const falta = aEntregar(p).length, parcial = entregaParcial(p);
-      if (p.status !== "reprovado") etapas.push({ rot: parcial ? "Entregue em parte" : "Entregue", quando: p.entregue_em,
+      const quemEnt = quemEntregou(p);
+      if (p.status !== "reprovado") etapas.push({ rot: parcial ? "Entregue em parte" : "Entregue", quando: p.entregue_em, parcial,
         espera: parcial ? (falta === 1 ? "falta 1 item" : "faltam " + falta + " itens") : "separando o material",
-        quem: p.entregue_por && "Entregue por " + nomeDe(p.entregue_por) });
+        quem: quemEnt && (parcial ? "Entregue em parte por " : "Entregue por ") + quemEnt });
     }
     // passar o mouse (ou tocar, no celular) numa etapa concluída mostra quem fez
     return h("ol", { class: "ped-etapas", "aria-label": "Andamento do pedido" }, etapas.map((e, i) => {
       const feito = !!e.quando, atual = !feito && !!etapas[i - 1].quando;
-      const dica = feito && e.quem ? e.quem : null;
+      const dica = (feito || e.parcial) && e.quem ? e.quem : null;
       return h("li", { class: [feito && "feito", atual && "atual", e.ruim && "ruim"].filter(Boolean).join(" "), tabindex: dica ? "0" : null },
         h("span", { class: "dot", "aria-hidden": "true" }),
         h("b", { text: e.rot }),
@@ -2147,7 +2159,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
           : p.status === "cancelado" ? h("span", { class: "pill adj", text: "Cancelado" })
           : h("span", { class: "pill forte warn", text: "Aguardando" });
         // na entrega parcial, cada item aprovado mostra se já saiu ou se ainda falta
-        const ent = it.entregue_em && p.status !== "entregue" ? h("span", { class: "pill ok", text: "Entregue " + fmtCurto(it.entregue_em).slice(0, 5) })
+        const ent = it.entregue_em && p.status !== "entregue" ? h("span", { class: "pill ok", text: "Entregue " + fmtCurto(it.entregue_em).slice(0, 5),
+            title: "Entregue" + (it.entregue_por ? " por " + nomeDe(it.entregue_por) : "") + " em " + fmtDataHora(it.entregue_em) })
           : entregaParcial(p) && it.decisao === "aprovado" && !it.entregue_em ? h("span", { class: "pill warn", text: "A entregar" }) : null;
         decisao = h("div", { class: "ped-decisao" }, d, ent, it.motivo ? h("span", { class: "ped-motivo", text: it.motivo }) : null);
       }
