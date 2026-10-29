@@ -1297,7 +1297,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     for (const it of lista) {
       const s = situacao(it);
       const saldo = num(it.saldo), min = num(it.minimo);
-      const pct = min > 0 ? Math.min(100, Math.max(0, saldo / (min * 2) * 100)) : (saldo > 0 ? 100 : 0);
+      // barra cheia quando o saldo chega ao mínimo; abaixo dele, mostra quanto falta
+      const pct = min > 0 ? Math.min(100, Math.max(0, saldo / min * 100)) : (saldo > 0 ? 100 : 0);
       const chk = h("input", { type: "checkbox", class: "sel-box", "aria-label": "Selecionar " + it.nome });
       chk.addEventListener("change", () => {
         if (chk.checked) state.sel.add(it.id); else state.sel.delete(it.id);
