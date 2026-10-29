@@ -380,6 +380,16 @@ td.sel { cursor: default; }
 .ped-decisao input.m { flex: 1 1 140px; }
 .ped-motivo { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
 .ped-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* lembrete de entrega pendente no Estoque */
+.pendencias { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; border-color: var(--warn); border-left: 5px solid var(--warn); }
+.pend-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.pend-head b { color: var(--warn); font-size: 15px; }
+.pend-head .muted { font-size: 13px; }
+.pendencias ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pendencias li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); }
+.pend-info { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; }
+.pend-itens { flex: 1 1 100%; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.ped-card { scroll-margin-top: 76px; }
 /* escolha dos itens na entrega parcial */
 .ped-entrega { flex: 1 1 100%; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; }
 .ped-entrega b { font-size: 13px; }
@@ -606,6 +616,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
 
   <!-- Estoque -->
   <section class="panel" id="p-estoque" role="tabpanel" aria-labelledby="t-estoque">
+    <div class="card pendencias" id="pendencias" hidden></div>
     <div class="toolbar">
       <input class="grow" id="f-busca" type="search" placeholder="Buscar item ou local" aria-label="Buscar item">
       <select id="f-cat" aria-label="Filtrar por categoria" hidden><option value="">Todas as categorias</option></select>
@@ -1718,9 +1729,36 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
 
   function atualizarContadorPedidos() {
     const c = $("#ped-count");
-    const n = podeEditar() ? state.pedidos.filter((p) => p.status === "pendente").length : 0;
+    // conta o que espera o operador: pedidos para analisar e entregas parciais com item faltando
+    const n = podeEditar() ? state.pedidos.filter((p) => p.status === "pendente" || entregaParcial(p)).length : 0;
     c.hidden = !n;
     c.textContent = n;
+    renderPendencias();
+  }
+
+  // lembrete no Estoque: pedido entregue em parte, com o que ainda falta entregar
+  function renderPendencias() {
+    const box = $("#pendencias");
+    const lista = podeEditar() ? state.pedidos.filter(entregaParcial).sort((a, b) => a.numero - b.numero) : [];
+    box.hidden = !lista.length;
+    if (!lista.length) { box.replaceChildren(); return; }
+    box.replaceChildren(
+      h("div", { class: "pend-head" },
+        h("b", { text: lista.length === 1 ? "1 pedido com entrega pendente" : lista.length + " pedidos com entrega pendente" }),
+        h("span", { class: "muted", text: "Itens que ficaram para depois na entrega parcial" })),
+      h("ul", null, lista.map((p) => h("li", null,
+        h("div", { class: "pend-info" },
+          h("b", { text: "Pedido nº " + p.numero }), h("span", { class: "pill adj", text: p.setor }),
+          h("span", { class: "pend-itens", text: "Falta: " + aEntregar(p).map((i) => i.item_nome + " (" + fmtQtd(i.qtd_aprovada) + " " + i.unidade + (i.fora_catalogo ? ", comprar à parte" : "") + ")").join(", ") })),
+        h("button", { class: "btn small", type: "button", onclick: () => verPedido(p) }, "Ver pedido")))));
+  }
+  function verPedido(p) {
+    $("#ped-filtro").value = "entrega";
+    state.pedModo = "lista";
+    irPara("pedidos");
+    renderPedidos();
+    const card = document.getElementById("ped-card-" + p.id);
+    if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   // ---------- novo pedido: vitrine e carrinho ----------
@@ -2265,7 +2303,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       p.cancelado_em ? "cancelado " + (p.cancelado_por ? "por " + nomeDe(p.cancelado_por) + " " : "") + "em " + fmtDataHora(p.cancelado_em) : "",
     ].filter(Boolean).join(" · ");
 
-    return h("article", { class: "card ped-card st-" + p.status },
+    return h("article", { class: "card ped-card st-" + p.status, id: "ped-card-" + p.id },
       h("div", { class: "ped-head" },
         h("b", { text: "Pedido nº " + p.numero }),
         h("span", { class: "pill forte " + cls, text: rot }),
