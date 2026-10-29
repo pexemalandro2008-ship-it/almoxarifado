@@ -453,6 +453,8 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
 .row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .count-box { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; padding: 12px; border: 1px dashed var(--line); border-radius: 8px; }
 .count-box .field { flex: 1 1 160px; }
+.previa-ajuste { flex: 1 1 100%; margin: 0; font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 8px; background: var(--ok-bg); color: var(--ok); }
+.previa-ajuste.menos { background: var(--warn-bg); color: var(--warn); }
 .confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: var(--crit-bg); color: var(--crit); }
 .confirm p { margin: 0; flex: 1 1 200px; }
 .dlg-section-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 0; }
@@ -1406,7 +1408,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     const fator = tipo === "entrada" && temEmbalagem(it) && $("#m-modo").value === "emb" ? num(it.qtd_embalagem) : 1;
     const qtd = round(digitado * fator);
     if (tipo === "saida" && qtd > num(it.saldo)) {
-      return falha("Saldo insuficiente: há " + fmtQtd(it.saldo) + " " + (it.unidade || "un") + ". Se o saldo estiver errado, faça uma contagem física no item.");
+      return falha("Saldo insuficiente: há " + fmtQtd(it.saldo) + " " + (it.unidade || "un") + ". Se chegou material, registre a entrada primeiro; se o saldo estiver errado, faça uma contagem física no item.");
     }
     const extra = tipo === "entrada"
       ? { custoUnit: (parseFloat($("#m-custo").value) || 0) / fator, fornecedor: $("#m-fornecedor").value.trim(), nf: $("#m-nf").value.trim(), obs: $("#m-obs").value.trim() }
@@ -2473,11 +2475,36 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     const fato = (rot, val) => h("div", { class: "fact" }, h("span", { text: rot }), h("b", { text: String(val) }));
     const contado = h("input", { id: "c-qtd", type: "number", min: "0", step: "any", inputmode: "decimal", placeholder: fmtQtd(it.saldo) });
     const btnAjuste = h("button", { class: "btn", type: "button" }, "Ajustar saldo");
+    // mostra o que vai acontecer antes de gravar: "O saldo vai de 8 para 2 cx (−6)"
+    const previaAjuste = h("p", { class: "previa-ajuste", hidden: true });
+    let confirmando = false;
+    const sincPrevia = () => {
+      confirmando = false;
+      btnAjuste.textContent = "Ajustar saldo";
+      btnAjuste.classList.remove("primary");
+      const v = parseFloat(contado.value);
+      if (!(v >= 0)) { previaAjuste.hidden = true; return; }
+      const delta = round(v - num(it.saldo));
+      previaAjuste.textContent = delta === 0 ? "O saldo já é " + fmtQtd(v) + " " + un + "; nada muda."
+        : "O saldo vai de " + fmtQtd(it.saldo) + " para " + fmtQtd(v) + " " + un + " (" + (delta > 0 ? "+" : "−") + fmtQtd(Math.abs(delta)) + ").";
+      previaAjuste.className = "previa-ajuste" + (delta < 0 ? " menos" : "");
+      previaAjuste.hidden = false;
+    };
+    contado.addEventListener("input", sincPrevia);
+    contado.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); btnAjuste.click(); } });
     btnAjuste.addEventListener("click", () => {
       const v = parseFloat(contado.value);
       if (!(v >= 0)) { toast("Informe a quantidade contada.", "erro"); contado.focus(); return; }
       const delta = round(v - num(it.saldo));
       if (delta === 0) { toast("O saldo já confere com a contagem."); return; }
+      // primeiro clique mostra a prévia e pede confirmação; o segundo grava
+      if (!confirmando) {
+        sincPrevia();
+        confirmando = true;
+        btnAjuste.textContent = "Confirmar ajuste";
+        btnAjuste.classList.add("primary");
+        return;
+      }
       comBusy(btnAjuste, async () => {
         await registrar("ajuste", it, delta, { obs: "Contagem física: " + fmtQtd(v) + " " + un });
         toast("Saldo ajustado para " + fmtQtd(v) + " " + un + ".");
@@ -2512,8 +2539,11 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         h("button", { class: "btn primary", type: "button", onclick: () => abrirMovimento(it.id, "entrada") }, "Registrar entrada"),
         h("button", { class: "btn", type: "button", onclick: () => abrirMovimento(it.id, "saida") }, "Registrar saída"),
         h("button", { class: "btn", type: "button", onclick: () => abrirFormItem(it) }, "Editar")),
+      // contagem física: troca o saldo pelo número contado (não soma; para somar, Registrar entrada)
       h("p", { class: "dlg-section-title so-edicao", text: "Contagem física" }),
-      h("div", { class: "count-box so-edicao" }, h("div", { class: "field" }, h("label", { for: "c-qtd", text: "Quantidade contada (" + un + ")" }), contado), btnAjuste),
+      h("div", { class: "count-box so-edicao" },
+        h("div", { class: "field" }, h("label", { for: "c-qtd", text: "Quantidade que tem no armário agora (" + un + ") — substitui o saldo" }), contado),
+        btnAjuste, previaAjuste),
       h("p", { class: "dlg-section-title", text: "Últimas movimentações" }),
       movsBox,
       zonaExcluir));
