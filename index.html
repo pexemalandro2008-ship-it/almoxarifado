@@ -856,9 +856,9 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
           <label for="p-papel">Perfil</label>
           <select id="p-papel">
             <option value="solicitante">Solicitante</option>
-            <option value="operador">Operador</option>
+            <option value="operador">Operador(a)</option>
             <option value="consulta">Consulta</option>
-            <option value="admin">Administrador</option>
+            <option value="admin">Administrador(a)</option>
           </select>
         </div>
         <div class="field">
@@ -868,9 +868,9 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
         </div>
         <ul class="papeis">
           <li><b>Solicitante:</b> faz pedidos de material para o setor e acompanha a aprovação. Não vê saldos nem valores.</li>
-          <li><b>Operador:</b> analisa e entrega pedidos, registra entradas e saídas, cadastra e edita itens.</li>
+          <li><b>Operador(a):</b> analisa e entrega pedidos, registra entradas e saídas, cadastra e edita itens.</li>
           <li><b>Consulta:</b> só vê estoque, histórico, relatórios e lista de compras.</li>
-          <li><b>Administrador:</b> tudo, inclusive excluir itens e gerenciar pessoas.</li>
+          <li><b>Administrador(a):</b> tudo, inclusive excluir itens e gerenciar pessoas.</li>
         </ul>
         <p class="form-error" id="p-erro" hidden></p>
         <button class="btn primary" type="submit" id="p-criar">Criar acesso</button>
@@ -925,7 +925,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
     ["Fita adesiva transparente 12 mm", CATEGORIA, "rolo", 5, "Armário 1"],
   ];
   const UNIDADES = [["un", "Unidade (un)"], ["cx", "Caixa (cx)"], ["pct", "Pacote (pct)"], ["resma", "Resma (500 folhas)"], ["rolo", "Rolo"], ["bloco", "Bloco"], ["fardo", "Fardo"], ["par", "Par"], ["kg", "Quilo (kg)"], ["L", "Litro (L)"]];
-  const PAPEL = { admin: "Administrador", operador: "Operador", consulta: "Consulta", solicitante: "Solicitante" };
+  const PAPEL = { admin: "Administrador(a)", operador: "Operador(a)", consulta: "Consulta", solicitante: "Solicitante" };
   const SETORES_PADRAO = ["Atendimento", "Compras", "Gastos", "Reposição"];
 
   const state = {
@@ -1106,7 +1106,7 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
       const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
       if (error) { falha("Conta criada, mas não foi possível entrar. Tente pela tela de login."); mostrarLogin(); return; }
       await entrar(data.user);
-      toast("Administrador criado. Comece cadastrando os itens.");
+      toast("Administrador(a) criado(a). Comece cadastrando os itens.");
     });
   });
   $("#btn-sair-bloqueado").addEventListener("click", sair);
