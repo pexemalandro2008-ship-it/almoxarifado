@@ -485,10 +485,12 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100vw - 32px); z-index: 10; }
 .toast.erro { background: var(--crit); color: var(--surface); }
 
-/* Mascote do almoxarifado (operador e administrador): botão flutuante que estoura uma mensagem motivacional */
+/* Mascote do almoxarifado (só operador): botão flutuante que estoura uma mensagem motivacional */
 .motiva { display: none; position: fixed; left: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 8; width: 84px; height: 84px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
   background: url("mascote.webp") center / contain no-repeat; filter: drop-shadow(0 10px 18px color-mix(in srgb, var(--accent) 40%, transparent)); transition: transform .2s; }
 body.logado .motiva { display: block; }
+/* só o operador vê o mascote; o administrador não (o body só tem "nao-admin" para quem não é admin) */
+body:not(.nao-admin) .motiva, body:not(.nao-admin) .motiva-msg { display: none !important; }
 /* o mascote balança de leve de vez em quando, para lembrar que está ali */
 body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s ease-in-out infinite; }
 @keyframes mascote-aceno { 0%, 82%, 100% { transform: none; } 86% { transform: rotate(-9deg); } 90% { transform: rotate(7deg); } 94% { transform: rotate(-4deg); } }
@@ -1655,7 +1657,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
       h("div", { class: "note-actions" }, btn)));
   }
 
-  // ---------- mensagem motivacional (operador e administrador) ----------
+  // ---------- mensagem motivacional (só operador) ----------
   const FRASES = [
     "Armário organizado é tempo ganho para todo mundo.",
     "Cada entrega no prazo faz o dia de alguém andar melhor.",
