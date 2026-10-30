@@ -485,18 +485,20 @@ dialog::backdrop { background: rgba(10, 14, 28, .45); }
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100vw - 32px); z-index: 10; }
 .toast.erro { background: var(--crit); color: var(--surface); }
 
-/* Botão de mensagem motivacional (operador e administrador), fixo no canto esquerdo */
-.motiva { display: none; position: fixed; left: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 8; width: 56px; height: 56px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
-  background: linear-gradient(135deg, var(--accent), #c084fc); color: var(--on-accent); place-items: center; box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 45%, transparent); transition: transform .2s; }
-body.logado .motiva { display: grid; }
-.motiva svg { width: 26px; height: 26px; pointer-events: none; }
+/* Mascote do almoxarifado (operador e administrador): botão flutuante que estoura uma mensagem motivacional */
+.motiva { display: none; position: fixed; left: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 8; width: 84px; height: 84px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+  background: url("mascote.webp") center / contain no-repeat; filter: drop-shadow(0 10px 18px color-mix(in srgb, var(--accent) 40%, transparent)); transition: transform .2s; }
+body.logado .motiva { display: block; }
+/* o mascote balança de leve de vez em quando, para lembrar que está ali */
+body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s ease-in-out infinite; }
+@keyframes mascote-aceno { 0%, 82%, 100% { transform: none; } 86% { transform: rotate(-9deg); } 90% { transform: rotate(7deg); } 94% { transform: rotate(-4deg); } }
 .motiva { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
 .motiva:hover { transform: scale(1.08) rotate(-8deg); }
 .motiva:active { transform: scale(.94); }
 /* enquanto arrasta: cresce um pouco, sombra maior e sem animação de transição */
 .motiva.arrastando { cursor: grabbing; transition: none; transform: scale(1.12); box-shadow: 0 18px 40px color-mix(in srgb, var(--accent) 55%, transparent); }
 .motiva.arrastando::after { animation: none; opacity: 0; }
-.motiva::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; animation: motiva-pulso 3.2s ease-out infinite; }
+.motiva::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; animation: motiva-pulso 3.2s ease-out infinite; }
 @keyframes motiva-pulso { 0% { transform: scale(.85); opacity: .7; } 70%, 100% { transform: scale(1.35); opacity: 0; } }
 .motiva-msg { position: fixed; left: 20px; bottom: calc(90px + env(safe-area-inset-bottom, 0px)); z-index: 60; /* acima do confete */ width: min(360px, calc(100vw - 40px)); padding: 18px 20px 14px 22px;
   border-radius: 18px 18px 18px 4px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); transform-origin: 0 100%; cursor: pointer; }
@@ -511,7 +513,7 @@ body.logado .motiva { display: grid; }
 .motiva-aspas { position: absolute; top: -18px; left: 16px; font-family: var(--f-display); font-size: 64px; line-height: 1; color: var(--accent); }
 .motiva-msg p { margin: 6px 0 8px; font-family: var(--f-display); font-size: 19px; font-weight: 700; line-height: 1.3; }
 .motiva-msg small { color: var(--muted); font-size: 12px; }
-@media (prefers-reduced-motion: reduce) { .motiva::after { animation: none; } .motiva-msg.entrando, .motiva-msg.saindo { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .motiva::after, body.logado .motiva:not(.arrastando):not(:hover) { animation: none; } .motiva-msg.entrando, .motiva-msg.saindo { animation: none; } }
 
 @media (max-width: 760px) {
   .mov-grid, .pessoas-grid, .carrinho-pagina { grid-template-columns: minmax(0, 1fr); }
@@ -923,7 +925,6 @@ body.logado .motiva { display: grid; }
 <div class="toast" id="toast" role="status" hidden></div>
 <!-- painel do operador: botão à esquerda que estoura uma mensagem motivacional -->
 <button class="motiva so-edicao" id="motiva" type="button" aria-label="Mensagem para animar o dia. Arraste ou use as setas para mudar de lugar." title="Clique para uma mensagem · arraste para mudar de lugar">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/><path d="M5 16l.6 1.4 1.4.6-1.4.6L5 20l-.6-1.4L3 18l1.4-.6z"/></svg>
 </button>
 <div class="motiva-msg so-edicao" id="motiva-msg" role="status" aria-live="polite" hidden>
   <span class="motiva-aspas" aria-hidden="true">“</span>
@@ -1690,7 +1691,7 @@ body.logado .motiva { display: grid; }
   // (em proporção da tela, para continuar no mesmo canto se a janela mudar de tamanho)
   const chaveMotiva = () => "almox-motiva-pos-" + (state.me ? state.me.user_id : "");
   function posicionarMotiva(x, y, salvar) {
-    const b = $("#motiva"), lado = 56, m = 8;
+    const b = $("#motiva"), lado = b.offsetWidth || 84, m = 8;
     x = Math.min(Math.max(x, m), innerWidth - lado - m);
     y = Math.min(Math.max(y, m), innerHeight - lado - m);
     b.style.left = x + "px"; b.style.top = y + "px"; b.style.bottom = "auto";
