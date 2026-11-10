@@ -318,6 +318,16 @@ td.sel { cursor: default; }
 .disp.fora, .pill.fora { color: var(--accent); }
 .pill.fora { background: var(--accent-soft); margin-left: 6px; vertical-align: 1px; }
 .ped-linhas li.fora { border-style: dashed; }
+/* departamento: seletor "Pedindo para" na vitrine e títulos dos grupos no carrinho */
+.loja-dep { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.loja-dep select { border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 10px; padding: 9px 12px; font-weight: 700; }
+.ped-linhas li.grupo-dep { display: flex; align-items: baseline; gap: 10px; padding: 10px 2px 2px; border: 0; background: none; }
+.ped-linhas li.grupo-dep:first-child { padding-top: 0; }
+.ped-linhas li.grupo-dep b { font-family: var(--f-display); font-size: 16px; color: var(--accent); }
+.ped-linhas li.grupo-dep .muted { font-size: 13px; }
+.deps-linha { margin-top: 6px; }
+.deps-linha .deps-inp { flex: 1 1 260px; min-width: 0; }
+.pill.dep { background: var(--accent-soft); color: var(--accent); margin-left: 6px; vertical-align: 1px; }
 .ped-linhas li.sem-estoque { border-color: var(--crit); background: var(--crit-bg); }
 .linha-erro { color: var(--crit); font-size: 12px; font-weight: 600; }
 .loja-acao > .btn.esgotado { cursor: not-allowed; opacity: .6; }
@@ -773,6 +783,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
     <!-- 1. vitrine: escolhe os materiais (como uma loja) -->
     <div class="loja" id="ped-loja">
       <div class="toolbar">
+        <label class="loja-dep" id="loja-dep-box" hidden>Pedindo para <select id="loja-dep" aria-label="Departamento para quem é o pedido"></select></label>
         <input class="grow" id="loja-busca" type="search" placeholder="Buscar material" aria-label="Buscar material" autocomplete="off">
         <button class="btn" type="button" id="loja-pdf" title="Lista para a equipe anotar quantidade e quem precisa">Lista em PDF</button>
       </div>
@@ -810,6 +821,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
           <dt>Setor</dt><dd id="ped-setor-info">—</dd>
           <dt>Materiais</dt><dd id="resumo-qtd" class="num">0</dd>
           <dt id="resumo-fora-rot" hidden>Fora do catálogo</dt><dd id="resumo-fora" class="num" hidden>0</dd>
+          <dt id="resumo-deps-rot" hidden>Departamentos</dt><dd id="resumo-deps" hidden></dd>
         </dl>
         <div class="field"><label for="ped-obs">Observação (opcional)</label><input id="ped-obs" autocomplete="off" placeholder="Ex.: material para o novo funcionário"></div>
         <p class="form-error" id="ped-erro" hidden></p>
@@ -899,7 +911,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
           <small>Obrigatório para Solicitante. Os pedidos da pessoa saem em nome deste setor.</small>
         </div>
         <ul class="papeis">
-          <li><b>Solicitante:</b> faz pedidos de material para o setor e acompanha a aprovação. Não vê saldos nem valores.</li>
+          <li><b>Solicitante:</b> faz pedidos de material para o setor (e para os departamentos que atende, definidos pelo administrador) e acompanha a aprovação. Não vê saldos nem valores.</li>
           <li><b>Operador(a):</b> analisa e entrega pedidos, registra entradas e saídas, cadastra e edita itens.</li>
           <li><b>Consulta:</b> só vê estoque, histórico, relatórios e lista de compras.</li>
           <li><b>Administrador(a):</b> tudo, inclusive excluir itens e gerenciar pessoas.</li>
@@ -972,7 +984,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
     me: null, itens: [], itensLoaded: false, movs: [], perfis: {}, tab: "estoque", relSeq: 0,
     sel: new Set(), confirmarMassa: false, detalheId: null, atualizarDetalhe: false, timer: null,
     pedidos: [], pedidosLoaded: false, catalogo: [], pedLinhas: [], pedConfirm: {},
-    pedModo: "loja", lojaCat: "", pedExtras: [], pedSemEstoque: new Set(),
+    pedModo: "loja", lojaCat: "", pedExtras: [], pedSemEstoque: new Set(), pedDep: "",
   };
   const podeEditar = () => state.me && (state.me.papel === "admin" || state.me.papel === "operador");
   const ehAdmin = () => state.me && state.me.papel === "admin";
@@ -1063,6 +1075,8 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
     if (/pedido_nao_pendente/.test(txt)) return "Este pedido já foi analisado ou cancelado. Atualize a página.";
     if (/pedido_nao_aprovado/.test(txt)) return "Este pedido não está aprovado para entrega. Atualize a página.";
     if (/nada_para_entregar/.test(txt)) return "Esses itens já foram entregues. Atualize a página.";
+    const depRuim = txt.match(/departamento_invalido: (.+)/);
+    if (depRuim) return "Você não atende o departamento " + depRuim[1] + ". Peça ao administrador para incluir na aba Pessoas.";
     if (/analise_incompleta/.test(txt)) return "Decida todos os itens do pedido antes de salvar.";
     if (/saldo_insuficiente/.test(txt)) return "Saldo insuficiente para essa saída.";
     if (/saldo_negativo/.test(txt)) return "A contagem deixaria o saldo negativo.";
@@ -1200,7 +1214,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
       const [itens, movs, perfis, pedidos, catalogo, auditoria] = await Promise.all([
         sol ? [] : q(sb.from("itens").select("*").order("nome")),
         sol ? [] : q(sb.from("movs").select("*").order("quando", { ascending: false }).limit(300)),
-        q(sb.from("perfis").select("user_id, nome, email, papel, ativo, setor")),
+        q(sb.from("perfis").select("user_id, nome, email, papel, ativo, setor, departamentos")),
         q(sb.from("pedidos").select("*, pedido_itens(*)").order("criado_em", { ascending: false }).limit(200)),
         sol ? q(sb.rpc("catalogo_pedido")) : null,
         ehAdmin() ? q(sb.from("auditoria").select("*").order("quando", { ascending: false }).limit(300)) : [],
@@ -1211,7 +1225,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
       state.movs = movs;
       state.perfis = Object.fromEntries(perfis.map((p) => [p.user_id, p]));
       const eu = state.perfis[state.me.user_id];
-      if (eu) state.me.setor = eu.setor;
+      if (eu) { state.me.setor = eu.setor; state.me.departamentos = eu.departamentos || []; }
       state.pedidos = pedidos;
       state.pedidosLoaded = true;
       state.catalogo = catalogo || itens.map((i) => ({
@@ -1963,7 +1977,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
       h("ul", null, lista.map((p) => h("li", null,
         h("div", { class: "pend-info" },
           h("b", { text: "Pedido nº " + p.numero }), h("span", { class: "pill adj", text: p.setor }),
-          h("span", { class: "pend-itens", text: "Falta: " + aEntregar(p).map((i) => i.item_nome + " (" + fmtQtd(i.qtd_aprovada) + " " + i.unidade + (i.fora_catalogo ? ", comprar à parte" : "") + ")").join(", ") })),
+          h("span", { class: "pend-itens", text: "Falta: " + aEntregar(p).map((i) => i.item_nome + " (" + fmtQtd(i.qtd_aprovada) + " " + i.unidade + (variosDeps(p) ? ", para " + depDe(p, i) : "") + (i.fora_catalogo ? ", comprar à parte" : "") + ")").join(", ") })),
         h("button", { class: "btn small", type: "button", onclick: () => verPedido(p) }, "Ver pedido")))));
   }
   function verPedido(p) {
@@ -1980,42 +1994,51 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
   const DISP_PILL = { disponivel: "ok", pouco: "warn", falta: "crit" };
   const chaveCarrinho = () => "almox-carrinho-" + state.me.user_id;
   // pedExtras: material que não está no catálogo, só com nome; o id local começa com "x:"
+  // Cada linha tem "dep": o departamento para quem é o material. O líder pode atender outros
+  // departamentos além do próprio setor (definidos pelo administrador na aba Pessoas).
+  function deptos() {
+    const lista = [meuSetor(), ...((state.me && state.me.departamentos) || [])].map((d) => String(d || "").trim()).filter(Boolean);
+    return [...new Set(lista)];
+  }
+  const depAtual = () => (deptos().includes(state.pedDep) ? state.pedDep : meuSetor());
   function carregarCarrinho() {
     try {
       const v = JSON.parse(localStorage.getItem(chaveCarrinho()) || "[]");
       const itens = Array.isArray(v) ? v : (v && v.itens) || [];
-      state.pedLinhas = itens.filter((l) => l && l.item_id && num(l.qtd) > 0).map((l) => ({ item_id: l.item_id, qtd: round(l.qtd) }));
+      state.pedLinhas = itens.filter((l) => l && l.item_id && num(l.qtd) > 0).map((l) => ({ item_id: l.item_id, qtd: round(l.qtd), dep: l.dep || meuSetor() }));
       state.pedExtras = (v && Array.isArray(v.extras) ? v.extras : []).filter((e) => e && String(e.id).startsWith("x:") && String(e.nome || "").trim() && num(e.qtd) > 0)
-        .map((e) => ({ id: e.id, nome: String(e.nome).trim().slice(0, 120), unidade: e.unidade || "un", qtd: round(e.qtd) }));
+        .map((e) => ({ id: e.id, nome: String(e.nome).trim().slice(0, 120), unidade: e.unidade || "un", qtd: round(e.qtd), dep: e.dep || meuSetor() }));
     } catch { state.pedLinhas = []; state.pedExtras = []; }
   }
   function salvarCarrinho() {
     try { localStorage.setItem(chaveCarrinho(), JSON.stringify({ itens: state.pedLinhas, extras: state.pedExtras })); } catch {}
   }
   const itemCatalogo = (id) => state.catalogo.find((i) => i.id === id);
-  const linhaCarrinho = (id) => state.pedLinhas.find((l) => l.item_id === id);
-  function mudarQtd(id, qtd) {
+  const linhaCarrinho = (id, dep = depAtual()) => state.pedLinhas.find((l) => l.item_id === id && l.dep === dep);
+  function mudarQtd(id, qtd, dep = depAtual()) {
     qtd = round(qtd);
     if (String(id).startsWith("x:")) {
       const extra = state.pedExtras.find((e) => e.id === id);
       if (qtd > 0 && extra) extra.qtd = qtd;
       else state.pedExtras = state.pedExtras.filter((e) => e.id !== id);
     } else {
-      const linha = linhaCarrinho(id);
+      const linha = linhaCarrinho(id, dep);
       const it = itemCatalogo(id);
       if (it) state.pedSemEstoque.delete(it.nome); // o banco confere de novo ao enviar
       if (qtd > 0 && linha) linha.qtd = qtd;
-      else if (qtd > 0) state.pedLinhas.push({ item_id: id, qtd });
-      else state.pedLinhas = state.pedLinhas.filter((l) => l.item_id !== id);
+      else if (qtd > 0) state.pedLinhas.push({ item_id: id, qtd, dep });
+      else state.pedLinhas = state.pedLinhas.filter((l) => !(l.item_id === id && l.dep === dep));
     }
     $("#ped-erro").hidden = true;
     salvarCarrinho();
     renderLoja();
   }
-  // tira do carrinho o que saiu do catálogo desde a última visita
+  // tira do carrinho o que saiu do catálogo desde a última visita;
+  // departamento que o líder deixou de atender volta para o setor dele
   function conferirCarrinho() {
-    const antes = state.pedLinhas.length;
+    const antes = state.pedLinhas.length, ok = deptos();
     state.pedLinhas = state.pedLinhas.filter((l) => itemCatalogo(l.item_id));
+    for (const l of [...state.pedLinhas, ...state.pedExtras]) if (!ok.includes(l.dep)) l.dep = meuSetor();
     if (state.pedLinhas.length < antes) { salvarCarrinho(); toast("Um material saiu do catálogo e foi retirado do seu carrinho."); }
   }
   const sigla = (nome) => {
@@ -2025,24 +2048,27 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
 
   // − quantidade +; "foco" deixa o teclado no mesmo botão depois de redesenhar
   function stepper(it, linha, onde) {
-    const inp = h("input", { type: "number", min: "0", step: "any", inputmode: "decimal", value: linha.qtd, "aria-label": "Quantidade de " + it.nome, "data-foco": onde + "=" + it.id });
+    // a chave junta material e departamento: o mesmo material pode estar no carrinho para dois departamentos
+    const ch = it.id + "@" + (linha.dep || "");
+    const inp = h("input", { type: "number", min: "0", step: "any", inputmode: "decimal", value: linha.qtd, "aria-label": "Quantidade de " + it.nome, "data-foco": onde + "=" + ch });
     // enquanto digita, o cartão e o carrinho mostram o mesmo número; ao sair do campo, redesenha
     inp.addEventListener("input", () => {
       const v = round(parseFloat(inp.value));
       if (!(v > 0)) return;
       linha.qtd = v;
       salvarCarrinho();
-      document.querySelectorAll('[data-foco$="=' + CSS.escape(it.id) + '"]').forEach((o) => { if (o !== inp) o.value = v; });
+      document.querySelectorAll('[data-foco$="=' + CSS.escape(ch) + '"]').forEach((o) => { if (o !== inp) o.value = v; });
     });
-    inp.addEventListener("change", () => mudarQtd(it.id, parseFloat(inp.value) || 0));
-    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); mudarQtd(it.id, parseFloat(inp.value) || 0); } });
+    inp.addEventListener("change", () => mudarQtd(it.id, parseFloat(inp.value) || 0, linha.dep));
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); mudarQtd(it.id, parseFloat(inp.value) || 0, linha.dep); } });
     return h("div", { class: "stepper" },
-      h("button", { type: "button", "aria-label": (linha.qtd <= 1 ? "Tirar do carrinho: " : "Diminuir ") + it.nome, "data-foco": onde + "-" + it.id, onclick: () => mudarQtd(it.id, linha.qtd - 1) }, "−"),
+      h("button", { type: "button", "aria-label": (linha.qtd <= 1 ? "Tirar do carrinho: " : "Diminuir ") + it.nome, "data-foco": onde + "-" + ch, onclick: () => mudarQtd(it.id, linha.qtd - 1, linha.dep) }, "−"),
       inp, h("span", { class: "un", text: it.unidade || "un" }),
-      h("button", { type: "button", "aria-label": "Aumentar " + it.nome, "data-foco": onde + "+" + it.id, onclick: () => mudarQtd(it.id, linha.qtd + 1) }, "+"));
+      h("button", { type: "button", "aria-label": "Aumentar " + it.nome, "data-foco": onde + "+" + ch, onclick: () => mudarQtd(it.id, linha.qtd + 1, linha.dep) }, "+"));
   }
   function cardLoja(it) {
     const linha = linhaCarrinho(it.id);
+    const dep = depAtual();
     return h("article", { class: "card loja-item" + (linha ? " no-carrinho" : "") },
       h("div", { class: "loja-topo" },
         h("span", { class: "loja-tile", "aria-hidden": "true", text: sigla(it.nome) }),
@@ -2051,8 +2077,8 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
       h("div", { class: "item-sub", text: (it.categoria || "Outros") + " · " + (it.unidade || "un") }),
       h("div", { class: "loja-acao" }, linha ? stepper(it, linha, "g")
         : it.disponibilidade === "falta" ? h("button", { class: "btn esgotado", type: "button", disabled: true }, "Sem estoque")
-        : h("button", { class: "btn", type: "button", "data-foco": "g+" + it.id, "aria-label": "Adicionar " + it.nome + " ao carrinho",
-          onclick: () => { mudarQtd(it.id, 1); toast(it.nome + " foi para o carrinho."); } }, "+ Adicionar")));
+        : h("button", { class: "btn", type: "button", "data-foco": "g+" + it.id + "@" + dep, "aria-label": "Adicionar " + it.nome + " ao carrinho",
+          onclick: () => { mudarQtd(it.id, 1, dep); toast(it.nome + " foi para o carrinho" + (deptos().length > 1 ? " (" + dep + ")." : ".")); } }, "+ Adicionar")));
   }
   // uma linha do carrinho: sigla, nome e situação, quantidade e o botão de tirar
   function linhaDoCarrinho(it, linha, situacao, classe, erro) {
@@ -2063,17 +2089,27 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
         situacao,
         erro ? h("small", { class: "linha-erro", text: erro }) : null),
       stepper(it, linha, "c"),
-      h("button", { class: "x", type: "button", "aria-label": "Tirar " + it.nome + " do carrinho", onclick: () => mudarQtd(it.id, 0) }, "×"));
+      h("button", { class: "x", type: "button", "aria-label": "Tirar " + it.nome + " do carrinho", onclick: () => mudarQtd(it.id, 0, linha.dep) }, "×"));
   }
   function renderCarrinho() {
     const linhas = state.pedLinhas.map((l) => ({ l, it: itemCatalogo(l.item_id) })).filter((x) => x.it);
-    $("#ped-linhas").replaceChildren(
-      ...linhas.map(({ l, it }) => {
+    const lis = (lista, extras) => [
+      ...lista.map(({ l, it }) => {
         const sem = state.pedSemEstoque.has(it.nome);
         return linhaDoCarrinho(it, l, h("span", { class: "disp " + it.disponibilidade, text: DISP[it.disponibilidade] || "" }),
           sem ? "sem-estoque" : null, sem ? "Não há estoque para essa quantidade." : null);
       }),
-      ...state.pedExtras.map((e) => linhaDoCarrinho(e, e, h("span", { class: "disp fora", text: "Fora do catálogo" }), "fora")));
+      ...extras.map((e) => linhaDoCarrinho(e, e, h("span", { class: "disp fora", text: "Fora do catálogo" }), "fora"))];
+    // líder que atende vários departamentos: o carrinho fica separado por departamento
+    const usados = deptos().filter((d) => linhas.some((x) => x.l.dep === d) || state.pedExtras.some((e) => e.dep === d));
+    if (deptos().length > 1 && usados.length) {
+      $("#ped-linhas").replaceChildren(...usados.flatMap((d) => {
+        const ls = linhas.filter((x) => x.l.dep === d), es = state.pedExtras.filter((e) => e.dep === d), n = ls.length + es.length;
+        return [h("li", { class: "grupo-dep" }, h("b", { text: "Para " + d }), h("span", { class: "muted", text: n + (n === 1 ? " material" : " materiais") })), ...lis(ls, es)];
+      }));
+    } else $("#ped-linhas").replaceChildren(...lis(linhas, state.pedExtras));
+    $("#resumo-deps").textContent = usados.join(", ");
+    $("#resumo-deps").hidden = $("#resumo-deps-rot").hidden = deptos().length < 2 || !usados.length;
     const n = linhas.length + state.pedExtras.length;
     $("#carrinho-qtd").textContent = n;
     $("#ped-modo-carrinho").textContent = n;
@@ -2099,6 +2135,12 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
     const chip = (valor, rotulo) => h("button", { class: "chip", type: "button", "aria-pressed": String(state.lojaCat === valor), "data-foco": "cat:" + valor,
       onclick: () => { state.lojaCat = valor; renderLoja(); } }, rotulo);
     $("#loja-cats").replaceChildren(...(cats.length > 1 ? [chip("", "Todos"), ...cats.map((c) => chip(c, c))] : []));
+    // "Pedindo para": só aparece para quem atende mais de um departamento
+    const deps = deptos(), selDep = $("#loja-dep");
+    $("#loja-dep-box").hidden = deps.length < 2;
+    if (selDep.options.length !== deps.length || [...selDep.options].some((o, i) => o.value !== deps[i]))
+      selDep.replaceChildren(...deps.map((d) => h("option", { value: d }, d)));
+    selDep.value = depAtual();
 
     const busca = norm($("#loja-busca").value.trim());
     const lista = state.catalogo.filter((i) => (!state.lojaCat || (i.categoria || "Outros") === state.lojaCat)
@@ -2113,6 +2155,11 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
     if (foco) { const el = document.querySelector('[data-foco="' + CSS.escape(foco) + '"]'); if (el) el.focus(); }
   }
   $("#loja-busca").addEventListener("input", renderLoja);
+  $("#loja-dep").addEventListener("change", (e) => {
+    state.pedDep = e.target.value;
+    renderLoja();
+    toast("Agora os materiais vão para " + state.pedDep + ".");
+  });
   $("#loja-pdf").addEventListener("click", () => {
     if (!state.catalogo.length) { toast("Ainda não há materiais no catálogo para gerar a lista.", "erro"); return; }
     pdfLista();
@@ -2128,9 +2175,10 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
     const unidade = $("#extra-un").value || "un";
     if (!nome) { erro.textContent = "Escreva o nome do material."; erro.hidden = false; $("#extra-nome").focus(); return; }
     if (!(qtd > 0)) { erro.textContent = "Informe a quantidade."; erro.hidden = false; $("#extra-qtd").focus(); return; }
-    const igual = state.pedExtras.find((e) => norm(e.nome) === norm(nome) && e.unidade === unidade);
+    const dep = depAtual();
+    const igual = state.pedExtras.find((e) => norm(e.nome) === norm(nome) && e.unidade === unidade && e.dep === dep);
     if (igual) igual.qtd = round(igual.qtd + qtd);
-    else state.pedExtras.push({ id: "x:" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), nome, unidade, qtd });
+    else state.pedExtras.push({ id: "x:" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), nome, unidade, qtd, dep });
     $("#extra-nome").value = "";
     $("#extra-qtd").value = "1";
     salvarCarrinho();
@@ -2163,8 +2211,8 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
     comBusy($("#ped-enviar"), async () => {
       let criado;
       const itens = [
-        ...state.pedLinhas.map((l) => ({ item_id: l.item_id, qtd: l.qtd })),
-        ...state.pedExtras.map((e) => ({ nome: e.nome, unidade: e.unidade, qtd: e.qtd })),
+        ...state.pedLinhas.map((l) => ({ item_id: l.item_id, qtd: l.qtd, departamento: l.dep || meuSetor() })),
+        ...state.pedExtras.map((e) => ({ nome: e.nome, unidade: e.unidade, qtd: e.qtd, departamento: e.dep || meuSetor() })),
       ];
       try {
         criado = await q(sb.rpc("criar_pedido", { p_itens: itens, p_obs: $("#ped-obs").value.trim() || null }));
@@ -2315,7 +2363,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
   // comprovante do pedido, com espaço para assinatura do responsável e de quem entrega
   function pdfPedido(p) {
     const [rot] = STATUS_PED[p.status] || [p.status];
-    const itens = (p.pedido_itens || []).slice().sort((a, b) => a.item_nome.localeCompare(b.item_nome, "pt-BR"));
+    const itens = itensDoPedido(p), multi = variosDeps(p);
     const resultado = (it) => it.decisao === "aprovado" ? "Aprovado " + fmtQtd(it.qtd_aprovada) + " " + it.unidade
         + (it.entregue_em ? " · entregue " + fmtDataHora(it.entregue_em) : entregaParcial(p) ? " · a entregar" : "")
       : it.decisao === "reprovado" ? "Reprovado" : p.status === "cancelado" ? "Cancelado" : "Aguardando";
@@ -2329,9 +2377,9 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
       p.obs ? h("p", { class: "obs", text: "Observação: " + p.obs }) : null,
       h("h2", { text: "Materiais" }),
       h("table", null,
-        h("thead", null, h("tr", null, h("th", { text: "Material" }), h("th", { class: "n", text: "Pedido" }), h("th", { text: "Resultado" }), h("th", { text: "Motivo" }))),
+        h("thead", null, h("tr", null, h("th", { text: "Material" }), multi ? h("th", { text: "Para" }) : null, h("th", { class: "n", text: "Pedido" }), h("th", { text: "Resultado" }), h("th", { text: "Motivo" }))),
         h("tbody", null, itens.map((it) => h("tr", null,
-          h("td", null, it.item_nome, it.fora_catalogo ? h("span", { class: "tag", text: "fora do catálogo" }) : null),
+          h("td", null, it.item_nome, it.fora_catalogo ? h("span", { class: "tag", text: "fora do catálogo" }) : null), multi ? h("td", { text: depDe(p, it) }) : null,
           h("td", { class: "n", text: fmtQtd(it.qtd_pedida) + " " + it.unidade }),
           h("td", { text: resultado(it) }),
           h("td", { text: it.motivo || "" }))))),
@@ -2339,6 +2387,13 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
         h("div", { text: "Responsável pelo setor " + p.setor }),
         h("div", { text: "Almoxarifado (entrega)" })));
   }
+
+  // departamento de cada item: o informado no pedido ou, em pedidos antigos, o setor de quem pediu
+  const depDe = (p, it) => String(it.departamento || "").trim() || p.setor;
+  const variosDeps = (p) => (p.pedido_itens || []).some((i) => depDe(p, i) !== p.setor);
+  // itens em ordem de departamento (o setor de quem pediu primeiro) e depois de nome
+  const itensDoPedido = (p) => (p.pedido_itens || []).slice().sort((a, b) =>
+    (depDe(p, a) === p.setor ? "" : depDe(p, a)).localeCompare(depDe(p, b) === p.setor ? "" : depDe(p, b), "pt-BR") || a.item_nome.localeCompare(b.item_nome, "pt-BR"));
 
   // itens aprovados que ainda não saíram do almoxarifado; parcial = já saiu parte e falta parte
   const aEntregar = (p) => (p.pedido_itens || []).filter((i) => i.decisao === "aprovado" && num(i.qtd_aprovada) > 0 && !i.entregue_em)
@@ -2386,7 +2441,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
 
   function cardPedido(p) {
     const [rot, cls] = STATUS_PED[p.status] || [p.status, "adj"];
-    const itens = (p.pedido_itens || []).slice().sort((a, b) => a.item_nome.localeCompare(b.item_nome, "pt-BR"));
+    const itens = itensDoPedido(p), multi = variosDeps(p);
     const analisa = podeEditar() && p.status === "pendente";
     const saldoDe = (id) => { const i = state.itens.find((x) => x.id === id); return i ? num(i.saldo) : null; };
     const controles = new Map();
@@ -2418,7 +2473,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
       }
       const saldo = podeEditar() || state.me.papel === "consulta" ? saldoDe(it.item_id) : null;
       return h("tr", null,
-        h("td", null, h("div", { class: "item-name" }, it.item_nome, it.fora_catalogo ? h("span", { class: "pill fora", text: "Fora do catálogo" }) : null),
+        h("td", null, h("div", { class: "item-name" }, it.item_nome, it.fora_catalogo ? h("span", { class: "pill fora", text: "Fora do catálogo" }) : null, multi ? h("span", { class: "pill dep", text: "Para " + depDe(p, it) }) : null),
           it.fora_catalogo && podeEditar() ? h("div", { class: "item-sub", text: "Não está no estoque: comprar à parte" })
           : !it.item_id && podeEditar() ? h("div", { class: "item-sub disp falta", text: estoquePorNome(it.item_nome) ? "Excluído e cadastrado de novo: a entrega usa o novo cadastro" : "Excluído do estoque: cadastre de novo com o mesmo nome para entregar" })
           : saldo != null ? h("div", { class: "item-sub", text: "Em estoque: " + fmtQtd(saldo) + " " + it.unidade }) : null),
@@ -2486,7 +2541,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
           h("div", { class: "ped-entrega" },
             h("b", { text: "O que vai ser entregue agora?" }),
             marcas.map(({ it, box }) => h("label", { class: "check" }, box,
-              it.item_nome + " — " + fmtQtd(it.qtd_aprovada) + " " + it.unidade, it.fora_catalogo ? h("span", { class: "pill fora", text: "Fora do catálogo" }) : null))),
+              it.item_nome + " — " + fmtQtd(it.qtd_aprovada) + " " + it.unidade + (multi ? " · para " + depDe(p, it) : ""), it.fora_catalogo ? h("span", { class: "pill fora", text: "Fora do catálogo" }) : null))),
           resumo, sim, h("button", { class: "btn small", type: "button", onclick: voltar }, "Voltar"));
       } else {
         acoes.append(h("button", { class: "btn primary small", type: "button", onclick: () => { state.pedConfirm[p.id] = "entregar"; renderPedidos(); } }, "Registrar entrega"));
@@ -2597,6 +2652,23 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
         catch (e) { toast(msgErro(e), "erro"); setorInp.value = p.setor || ""; }
         finally { setorInp.disabled = false; }
       });
+      // departamentos que a pessoa também atende nos pedidos, separados por vírgula
+      const depsAtuais = (p.departamentos || []).join(", ");
+      const depsInp = h("input", { value: depsAtuais, placeholder: "Atende também (ex.: Faturamento, Gastos)", "aria-label": "Departamentos que " + (p.nome || p.email) + " também atende", class: "deps-inp", title: "Departamentos para os quais esta pessoa faz pedidos, além do próprio setor. Separe por vírgula." });
+      depsInp.addEventListener("change", async () => {
+        // sem repetir (sem diferenciar maiúsculas e acentos) e sem o próprio setor
+        const vistos = new Set([norm(p.setor || "")]);
+        const lista = depsInp.value.split(",").map((d) => d.replace(/\s+/g, " ").trim())
+          .filter((d) => d && !vistos.has(norm(d)) && vistos.add(norm(d)));
+        if (lista.join(", ") === depsAtuais) { depsInp.value = depsAtuais; return; }
+        depsInp.disabled = true;
+        try {
+          await q(sb.from("perfis").update({ departamentos: lista }).eq("user_id", p.user_id));
+          toast(lista.length ? (p.nome || p.email) + " agora também pede para: " + lista.join(", ") + "." : (p.nome || p.email) + " pede só para o próprio setor.");
+          await carregarTudo();
+        } catch (e) { toast(msgErro(e), "erro"); depsInp.value = depsAtuais; }
+        finally { depsInp.disabled = false; }
+      });
       sel.value = p.papel;
       sel.addEventListener("change", async () => {
         sel.disabled = true;
@@ -2628,7 +2700,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
       zonaSenha.append(btnSenha);
       return h("tr", null,
         h("td", null, h("div", { class: "item-name", text: (p.nome || "—") + (euMesmo ? " (você)" : "") }), h("div", { class: "item-sub", text: p.email || "" })),
-        h("td", null, h("div", { class: "inline-row" }, sel, setorInp)),
+        h("td", null, h("div", { class: "inline-row" }, sel, setorInp), p.papel !== "consulta" ? h("div", { class: "inline-row deps-linha" }, depsInp) : null),
         h("td", null, h("span", { class: "pill " + (p.ativo ? "ok" : "crit"), text: p.ativo ? "Ativo" : "Bloqueado" })),
         h("td", null, h("div", { class: "inline-row" }, btnAtivo), zonaSenha));
     }));
