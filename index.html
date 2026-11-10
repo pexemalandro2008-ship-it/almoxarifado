@@ -398,6 +398,23 @@ td.sel { cursor: default; }
 .limpar-form p.muted { margin: 0; font-size: 13px; }
 .limpar-form .check { color: var(--ink); white-space: normal; }
 .limpar-form .btn { align-self: flex-start; }
+/* janela de pedidos */
+.janela-aviso { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--r); border: 1px solid var(--ok); background: var(--ok-bg); color: var(--ok); font-weight: 600; }
+.janela-aviso.fechada { flex-direction: column; align-items: flex-start; gap: 6px; padding: 28px 24px; border-color: var(--warn); background: var(--warn-bg); color: var(--warn); }
+.janela-aviso.fechada b { font-family: var(--f-display); font-size: 24px; }
+.janela-aviso.fechada span { color: var(--ink); font-weight: 500; }
+.janela-aviso .bolinha { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 25%, transparent); }
+.janela-painel { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.janela-status { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-weight: 700; }
+.janela-status.aberta { color: var(--ok); }
+.janela-status.fechada { color: var(--warn); }
+.janela-status .muted { font-weight: 500; }
+.janela-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.janela-form .field { flex: 0 1 160px; }
+.janela-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.janela-lista:empty { display: none; }
+.janela-lista li { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: var(--surface-2); font-size: 14px; }
+.janela-lista li span:first-child { flex: 1 1 auto; }
 /* lembrete de entrega pendente no Estoque */
 .pendencias { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; border-color: var(--warn); border-left: 5px solid var(--warn); }
 .pend-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
@@ -773,6 +790,21 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
 
   <!-- Pedidos dos setores -->
   <section class="panel" id="p-pedidos" role="tabpanel" aria-labelledby="t-pedidos" hidden>
+    <!-- janela de pedidos: aviso para quem pede (aberta até… / fechada, próxima…) -->
+    <div class="janela-aviso" id="janela-aviso" hidden></div>
+    <!-- janela de pedidos: painel do operador para abrir, agendar e encerrar -->
+    <div class="card janela-painel so-edicao" id="janela-painel" hidden>
+      <div class="janela-status" id="janela-status"></div>
+      <div class="janela-form">
+        <div class="field"><label for="jan-dia">Dia</label><input id="jan-dia" type="date"></div>
+        <div class="field"><label for="jan-ini">Abre às</label><input id="jan-ini" type="time" value="08:00"></div>
+        <div class="field"><label for="jan-fim">Fecha às</label><input id="jan-fim" type="time" value="12:00"></div>
+        <button class="btn primary" type="button" id="jan-agendar">Agendar janela</button>
+        <button class="btn" type="button" id="jan-agora" title="Abre agora e fecha no horário de &quot;Fecha às&quot; de hoje">Abrir agora</button>
+      </div>
+      <p class="form-error" id="jan-erro" hidden></p>
+      <ul class="janela-lista" id="janela-lista"></ul>
+    </div>
     <div class="seg ped-modo" id="ped-modo" role="group" aria-label="Pedidos">
       <button type="button" data-modo="loja" aria-pressed="true">Fazer pedido</button>
       <button type="button" data-modo="carrinho" aria-pressed="false">
@@ -983,7 +1015,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
   const state = {
     me: null, itens: [], itensLoaded: false, movs: [], perfis: {}, tab: "estoque", relSeq: 0,
     sel: new Set(), confirmarMassa: false, detalheId: null, atualizarDetalhe: false, timer: null,
-    pedidos: [], pedidosLoaded: false, catalogo: [], pedLinhas: [], pedConfirm: {},
+    pedidos: [], pedidosLoaded: false, janelas: [], catalogo: [], pedLinhas: [], pedConfirm: {},
     pedModo: "loja", lojaCat: "", pedExtras: [], pedSemEstoque: new Set(), pedDep: "",
   };
   const podeEditar = () => state.me && (state.me.papel === "admin" || state.me.papel === "operador");
@@ -1075,6 +1107,9 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
     if (/pedido_nao_pendente/.test(txt)) return "Este pedido já foi analisado ou cancelado. Atualize a página.";
     if (/pedido_nao_aprovado/.test(txt)) return "Este pedido não está aprovado para entrega. Atualize a página.";
     if (/nada_para_entregar/.test(txt)) return "Esses itens já foram entregues. Atualize a página.";
+    if (/janela_fechada/.test(txt)) return "Os pedidos estão fechados agora. Aguarde o almoxarifado abrir a próxima janela.";
+    if (/janela_invalida/.test(txt)) return "Confira os horários: o fechamento precisa ser depois da abertura e ainda não pode ter passado.";
+    if (/janela_longa/.test(txt)) return "A janela pode durar no máximo 31 dias.";
     const depRuim = txt.match(/departamento_invalido: (.+)/);
     if (depRuim) return "Você não atende o departamento " + depRuim[1] + ". Peça ao administrador para incluir na aba Pessoas.";
     if (/analise_incompleta/.test(txt)) return "Decida todos os itens do pedido antes de salvar.";
@@ -1211,13 +1246,15 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
     try {
       // solicitante não lê saldos nem histórico: recebe só o catálogo com a disponibilidade
       const sol = ehSolicitante();
-      const [itens, movs, perfis, pedidos, catalogo, auditoria] = await Promise.all([
+      const [itens, movs, perfis, pedidos, catalogo, auditoria, janelas] = await Promise.all([
         sol ? [] : q(sb.from("itens").select("*").order("nome")),
         sol ? [] : q(sb.from("movs").select("*").order("quando", { ascending: false }).limit(300)),
         q(sb.from("perfis").select("user_id, nome, email, papel, ativo, setor, departamentos")),
         q(sb.from("pedidos").select("*, pedido_itens(*)").order("criado_em", { ascending: false }).limit(200)),
         sol ? q(sb.rpc("catalogo_pedido")) : null,
         ehAdmin() ? q(sb.from("auditoria").select("*").order("quando", { ascending: false }).limit(300)) : [],
+        // janelas de pedido: as atuais e as próximas (as que já fecharam há mais de um dia não importam)
+        q(sb.from("janelas_pedido").select("*").gte("fecha_em", new Date(Date.now() - 864e5).toISOString()).order("abre_em").limit(50)),
       ]);
       state.auditoria = auditoria;
       state.itens = itens;
@@ -1227,6 +1264,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
       const eu = state.perfis[state.me.user_id];
       if (eu) { state.me.setor = eu.setor; state.me.departamentos = eu.departamentos || []; }
       state.pedidos = pedidos;
+      state.janelas = janelas;
       state.pedidosLoaded = true;
       state.catalogo = catalogo || itens.map((i) => ({
         id: i.id, nome: i.nome, categoria: i.categoria, unidade: i.unidade,
@@ -2241,12 +2279,92 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
   // análise em andamento: a atualização automática não redesenha os cartões (perderia o que foi digitado)
   $("#ped-cards").addEventListener("input", () => { state.pedSujo = true; });
 
+  // ---------- janela de pedidos ----------
+  // o operador abre (agora ou agendada) um período em que os solicitantes podem pedir
+  const janelaAgora = () => { const t = Date.now(); return state.janelas.find((j) => Date.parse(j.abre_em) <= t && t < Date.parse(j.fecha_em)) || null; };
+  const proximaJanela = () => state.janelas.filter((j) => Date.parse(j.abre_em) > Date.now()).sort((a, b) => Date.parse(a.abre_em) - Date.parse(b.abre_em))[0] || null;
+  const SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  function quandoTxt(iso) {
+    const d = new Date(iso), hoje = new Date(), amanha = new Date(Date.now() + 864e5);
+    const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const dia = d.toDateString() === hoje.toDateString() ? "hoje" : d.toDateString() === amanha.toDateString() ? "amanhã"
+      : SEMANA[d.getDay()] + ", " + d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    return { dia, hora };
+  }
+  function janelaTxt(j) {
+    const a = quandoTxt(j.abre_em), f = quandoTxt(j.fecha_em);
+    return a.dia === f.dia ? a.dia + " das " + a.hora + " às " + f.hora : a.dia + " às " + a.hora + " até " + f.dia + " às " + f.hora;
+  }
+  let janelaVista = null; // aberta/fechada na última vez que a tela foi desenhada
+  function renderJanela() {
+    const agora = janelaAgora(), prox = proximaJanela();
+    janelaVista = !!agora;
+    // aviso para o solicitante
+    const aviso = $("#janela-aviso");
+    aviso.hidden = !ehSolicitante() || !state.pedidosLoaded;
+    if (!aviso.hidden) {
+      if (agora) {
+        aviso.className = "janela-aviso";
+        const f = quandoTxt(agora.fecha_em);
+        aviso.replaceChildren(h("span", { class: "bolinha", "aria-hidden": "true" }), h("span", { text: "Pedidos abertos até " + f.hora + (f.dia === "hoje" ? "" : " de " + f.dia) + "." }));
+      } else {
+        aviso.className = "janela-aviso fechada";
+        aviso.replaceChildren(h("b", { text: "Os pedidos estão fechados agora" }),
+          h("span", { text: prox ? "Próxima janela: " + janelaTxt(prox) + "." : "O almoxarifado ainda não marcou a próxima janela de pedidos." }),
+          h("span", { class: "muted", text: "Você continua vendo o andamento dos seus pedidos abaixo." }));
+      }
+    }
+    // painel do operador
+    const painel = $("#janela-painel");
+    painel.hidden = !podeEditar();
+    if (painel.hidden) return;
+    const st = $("#janela-status");
+    st.className = "janela-status " + (agora ? "aberta" : "fechada");
+    st.replaceChildren(
+      h("span", { text: agora ? "● Pedidos abertos para os solicitantes até " + quandoTxt(agora.fecha_em).hora + (quandoTxt(agora.fecha_em).dia === "hoje" ? "" : " de " + quandoTxt(agora.fecha_em).dia) : "● Pedidos fechados para os solicitantes" }),
+      !agora && prox ? h("span", { class: "muted", text: "Próxima: " + janelaTxt(prox) }) : "",
+      agora ? h("button", { class: "btn danger small", type: "button", onclick: (e) => encerrarJanela(agora, e.currentTarget) }, "Encerrar agora") : "");
+    if (!$("#jan-dia").value) $("#jan-dia").value = hojeISO();
+    $("#janela-lista").replaceChildren(...state.janelas.filter((j) => Date.parse(j.abre_em) > Date.now()).map((j) =>
+      h("li", null, h("span", { text: "Agendada: " + janelaTxt(j) }),
+        h("button", { class: "btn small", type: "button", onclick: (e) => encerrarJanela(j, e.currentTarget) }, "Cancelar"))));
+  }
+  async function encerrarJanela(j, btn) {
+    await comBusy(btn, async () => {
+      try { await q(sb.rpc("encerrar_janela", { p_id: j.id })); }
+      catch (err) { toast(msgErro(err), "erro"); return; }
+      toast(Date.parse(j.abre_em) > Date.now() ? "Janela agendada cancelada." : "Pedidos fechados para os solicitantes.");
+      await carregarTudo();
+    });
+  }
+  async function agendarJanela(agoraMesmo, btn) {
+    const erro = $("#jan-erro");
+    erro.hidden = true;
+    const dia = agoraMesmo ? hojeISO() : $("#jan-dia").value, ini = $("#jan-ini").value, fim = $("#jan-fim").value;
+    if (!dia || !fim || (!agoraMesmo && !ini)) { erro.textContent = "Preencha o dia e os horários."; erro.hidden = false; return; }
+    const abre = agoraMesmo ? null : new Date(dia + "T" + ini), fecha = new Date(dia + "T" + fim);
+    if (fecha <= (abre || new Date())) { erro.textContent = agoraMesmo ? "O horário de fechamento de hoje já passou. Ajuste \"Fecha às\"." : "O fechamento precisa ser depois da abertura."; erro.hidden = false; return; }
+    await comBusy(btn, async () => {
+      try { await q(sb.rpc("agendar_janela", { p_abre: abre ? abre.toISOString() : null, p_fecha: fecha.toISOString() })); }
+      catch (err) { erro.textContent = msgErro(err); erro.hidden = false; return; }
+      toast(agoraMesmo ? "Pedidos abertos até " + fim + "." : "Janela agendada: " + janelaTxt({ abre_em: abre.toISOString(), fecha_em: fecha.toISOString() }) + ".");
+      await carregarTudo();
+    });
+  }
+  $("#jan-agendar").addEventListener("click", (e) => agendarJanela(false, e.currentTarget));
+  $("#jan-agora").addEventListener("click", (e) => agendarJanela(true, e.currentTarget));
+  // a janela abre e fecha sozinha no horário: confere a cada 20 s e redesenha quando muda
+  setInterval(() => { if (state.me && state.pedidosLoaded && janelaVista !== !!janelaAgora()) renderPedidos(); }, 20000);
+
   function renderPedidos() {
     state.pedSujo = false;
     atualizarContadorPedidos();
-    const pode = podePedir();
+    // solicitante fora da janela de pedidos: sem vitrine nem carrinho, só "Meus pedidos" e o aviso
+    const fechadoParaMim = ehSolicitante() && state.pedidosLoaded && !janelaAgora();
+    const pode = podePedir() && !fechadoParaMim;
     const modo = pode ? state.pedModo : "lista";
     $("#ped-modo").hidden = !pode;
+    renderJanela();
     $("#ped-loja").hidden = modo !== "loja";
     $("#ped-carrinho").hidden = modo !== "carrinho";
     $("#ped-grid").hidden = modo !== "lista";
