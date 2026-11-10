@@ -1228,8 +1228,8 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
     const partes = nomeExib.split(/\s+/).filter(Boolean);
     $("#u-nome").textContent = nomeExib;
     $("#u-avatar").textContent = ((partes[0] || "?")[0] + (partes.length > 1 ? partes[partes.length - 1][0] : "")).toUpperCase();
-    const hora = new Date().getHours();
-    $("#saudacao").textContent = (hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite") + ", " + (partes[0] || "você");
+    // saudação que vale para qualquer hora (a página pode ficar aberta de manhã até a noite)
+    $("#saudacao").textContent = "Olá, " + (partes[0] || "você") + "!";
     $("#u-papel").textContent = PAPEL[perfil.papel] || perfil.papel;
     mostrarTela("app");
     const hash = (location.hash || "").replace("#", "");
