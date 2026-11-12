@@ -946,7 +946,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
           <li><b>Solicitante:</b> faz pedidos de material para o setor (e para os departamentos que atende, definidos pelo administrador) e acompanha a aprovação. Não vê saldos nem valores.</li>
           <li><b>Operador(a):</b> analisa e entrega pedidos, registra entradas e saídas, cadastra e edita itens.</li>
           <li><b>Consulta:</b> só vê estoque, histórico, relatórios e lista de compras.</li>
-          <li><b>Administrador(a):</b> tudo, inclusive excluir itens e gerenciar pessoas.</li>
+          <li><b>Administrador(a):</b> tudo, inclusive excluir itens e gerenciar pessoas (criar, bloquear e remover acessos).</li>
         </ul>
         <p class="form-error" id="p-erro" hidden></p>
         <button class="btn primary" type="submit" id="p-criar">Criar acesso</button>
@@ -984,8 +984,8 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
 
   // Endereço e chave pública do banco. A chave é pública por natureza;
   // quem protege os dados são as regras de acesso no próprio Supabase.
-  const SUPA_URL = "https://zljrvqahsnfhcyjmcyvh.supabase.co";
-  const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsanJ2cWFoc25maGN5am1jeXZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwODA3MTgsImV4cCI6MjEwNzY1NjcxOH0.ig0jWeVyYNvaNQ9HvJItkpK-A20sXvo8aZ4fcXsV76c";
+  const SUPA_URL = "https://onshpjflswvqhqxvmgus.supabase.co";
+  const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9uc2hwamZsc3d2cWhxeHZtZ3VzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ0ODczMDIsImV4cCI6MjExMDA2MzMwMn0.H5CnmmrZRQ2bgfQ8yjqi2hlklYRjxmiEZdTw0EZ7s_8";
   const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 
   // o almoxarifado é só de papelaria: todo item fica na categoria Escritório
@@ -1249,7 +1249,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
       const [itens, movs, perfis, pedidos, catalogo, auditoria, janelas] = await Promise.all([
         sol ? [] : q(sb.from("itens").select("*").order("nome")),
         sol ? [] : q(sb.from("movs").select("*").order("quando", { ascending: false }).limit(300)),
-        q(sb.from("perfis").select("user_id, nome, email, papel, ativo, setor, departamentos")),
+        q(sb.from("perfis").select("user_id, nome, email, papel, ativo, setor, departamentos, removido_em")),
         q(sb.from("pedidos").select("*, pedido_itens(*)").order("criado_em", { ascending: false }).limit(200)),
         sol ? q(sb.rpc("catalogo_pedido")) : null,
         ehAdmin() ? q(sb.from("auditoria").select("*").order("quando", { ascending: false }).limit(300)) : [],
@@ -2755,7 +2755,7 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
   function renderPessoas() {
     const alvo = $("#p-tabela");
     if (!ehAdmin()) { alvo.replaceChildren(); return; }
-    const lista = Object.values(state.perfis).sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+    const lista = Object.values(state.perfis).filter((p) => !p.removido_em).sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
     if (!lista.length) { alvo.replaceChildren(h("p", { class: "muted", text: "Ninguém cadastrado ainda." })); return; }
     const tbody = h("tbody", null, lista.map((p) => {
       const euMesmo = p.user_id === state.me.user_id;
@@ -2816,11 +2816,30 @@ body.logado .motiva:not(.arrastando):not(:hover) { animation: mascote-aceno 6s e
         zonaSenha.replaceChildren(inp, ok, h("button", { class: "btn small", type: "button", onclick: () => zonaSenha.replaceChildren(btnSenha) }, "Cancelar"));
       });
       zonaSenha.append(btnSenha);
+      // remover: apaga o login de vez (o nome continua nos pedidos e no histórico); pede o nome para confirmar
+      const zonaRemover = h("div", { class: "inline-row" });
+      const btnRemover = h("button", { class: "btn small danger", type: "button", disabled: euMesmo, title: euMesmo ? "Você não pode remover o próprio acesso" : null }, "Remover");
+      btnRemover.addEventListener("click", () => {
+        const nomeAlvo = (p.nome || p.email || "").trim();
+        const conf = h("input", { "aria-label": "Digite o nome para confirmar", placeholder: "Digite: " + nomeAlvo, style: "width:12em" });
+        const sim = h("button", { class: "btn small danger solid", type: "button", disabled: true }, "Remover de vez");
+        conf.addEventListener("input", () => { sim.disabled = norm(conf.value.trim()) !== norm(nomeAlvo); });
+        sim.addEventListener("click", () => comBusy(sim, async () => {
+          try { await chamarFuncao({ acao: "excluir", user_id: p.user_id }); }
+          catch (err) { toast(err.message, "erro"); return; }
+          toast(nomeAlvo + " foi removido(a). O nome continua nos pedidos e no histórico.");
+          await carregarTudo();
+        }));
+        zonaRemover.replaceChildren(h("span", { class: "muted", text: "Não dá para desfazer." }), conf, sim,
+          h("button", { class: "btn small", type: "button", onclick: () => zonaRemover.replaceChildren(btnRemover) }, "Cancelar"));
+        conf.focus();
+      });
+      zonaRemover.append(btnRemover);
       return h("tr", null,
         h("td", null, h("div", { class: "item-name", text: (p.nome || "—") + (euMesmo ? " (você)" : "") }), h("div", { class: "item-sub", text: p.email || "" })),
         h("td", null, h("div", { class: "inline-row" }, sel, setorInp), p.papel !== "consulta" ? h("div", { class: "inline-row deps-linha" }, depsInp) : null),
         h("td", null, h("span", { class: "pill " + (p.ativo ? "ok" : "crit"), text: p.ativo ? "Ativo" : "Bloqueado" })),
-        h("td", null, h("div", { class: "inline-row" }, btnAtivo), zonaSenha));
+        h("td", null, h("div", { class: "inline-row" }, btnAtivo), zonaSenha, zonaRemover));
     }));
     alvo.replaceChildren(h("table", null,
       h("thead", null, h("tr", null, h("th", { text: "Pessoa" }), h("th", { text: "Perfil e setor" }), h("th", { text: "Situação" }), h("th", { text: "Ações" }))),
